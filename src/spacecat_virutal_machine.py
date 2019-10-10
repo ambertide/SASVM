@@ -1,5 +1,7 @@
-from typing import List, Dict
+from typing import List, Dict, Callable, Pattern, Tuple, cast
 from typing_extensions import Final
+from dataclasses import dataclass
+from re import compile
 
 
 class MemoryAddressException(Exception):
@@ -10,18 +12,48 @@ class InsufficientSpaceException(Exception):
     pass
 
 
+class InvalidInstructionException(Exception):
+    pass
+
+
+class Util:
+    """
+    General utilities for SVM.
+    """
+    @staticmethod
+    def int_to_base_string(integer: int, base: int) -> str:
+        if integer == 0:
+            return "0"
+        else:
+            return Util.int_to_base_string(integer // base, base) + str(integer % base)
+
+
+@dataclass
+class ParsedInstruction:
+    """
+    Represents a parsed instruction
+    """
+    args: Tuple[str, ...]
+    method: Callable
+    base: int
+
+    def execute(self):
+        args_parsed = tuple(int(arg, self.base) for arg in self.args)
+        self.method(*args_parsed)
+
+
 class _MemorySpace:
     """
     Class representing anything representable as a memory.
     """
-    def __init__(self, bit_size: int, size: int, preload_memory: List[int] = []) -> None:
+    def __init__(self, bit_size: int, size: int, preload_memory: List[int] = None) -> None:
         """
         Initiate a _MemorySpace instance.
         :param bit_size: Size of individual cells.
         :param size: Size of the memory.
         :param preload_memory: Preloaded instructions.
         """
-        self._memory_list = [0 for _ in range(size)]
+        self._memory_list: List[int] = [0 for _ in range(size)]
         if preload_memory:
             try:
                 assert size >= len(preload_memory)
@@ -66,6 +98,38 @@ class _MemorySpace:
         return f"{op_code_operation:X}{op_code_operands:X}"
 
 
+class InternalParser:
+    """
+    Parses the machine instructions to pythonic methods and functions.
+    """
+    def __init__(self, bit_size: int):
+        """
+        Initialise the InternalParser
+        """
+        self.BIT_SIZE: int = bit_size
+        self.instruction_to_method: Dict[Pattern, Callable] = {}
+        self.instruction_to_argument_map: Dict[Pattern, Tuple[Pattern]] = {}
+
+    def parse_instruction(self, instruction: str) -> ParsedInstruction:
+        """
+        Parse an instruction from a machine instruction to ParsedInstruction
+        :param instruction: Machine instruction
+        :return:
+        """
+        method: Callable = lambda x: None
+        args: Tuple[str, ...] = tuple("")
+        for pattern in self.instruction_to_method:
+            if pattern.search(instruction):
+                method = self.instruction_to_method[pattern]
+                args_pattern_tuple = self.instruction_to_argument_map[pattern]
+                try:
+                    args = tuple(arg_pattern.search(pattern).group()[0] for
+                                arg_pattern in args_pattern_tuple)  # type: ignore
+                except AttributeError:
+                    raise InvalidInstructionException(f"Instruction {pattern} failed to resolve.")
+        return ParsedInstruction(args=args, method=method, base=self.BIT_SIZE)
+
+
 class SpaceCatVirtualMachine:
     """
     Pythonic representation of the SpaceCat Virtual Machine
@@ -88,6 +152,15 @@ class SpaceCatVirtualMachine:
         self.registers = _MemorySpace(bit_size=bit_size, size=register_size)
         self.instruction_pointer: int = 0
         self.program_counter: str = self.memory.retrieve_instruction(self.instruction_pointer)
+        self.internalParser: InternalParser = InternalParser(self.BIT_SIZE)
+
+    def next_instruction(self) -> None:
+        """
+        Execute the next instruction
+        :return: None.
+        """
+        instruction: ParsedInstruction = self.internalParser.parse_instruction(self.program_counter)
+        instruction.execute()
 
     def set_instruction_pointer(self, value: int) -> None:
         """
@@ -126,7 +199,7 @@ class SpaceCatVirtualMachine:
             value_to_store = memory_address_or_number
         self.registers.store(register_address, value_to_store)
 
-    def add(self, store_register_address, first_register_address, seconds_register_address) -> None:
+    def add(self, store_register_address: int, first_register_address: int, seconds_register_address: int) -> None:
         """
         Add values from two registers and store it in a third.
         :param store_register_address: Register address to store the value.
@@ -138,7 +211,7 @@ class SpaceCatVirtualMachine:
                              self.registers.retrieve(first_register_address) +
                              self.registers.retrieve(seconds_register_address))
 
-    def move(self, memory_address_to_move, register_address_source) -> None:
+    def move(self, memory_address_to_move: int, register_address_source: int) -> None:
         """
         Move a value from a register to a cell in memory.
         :param memory_address_to_move: Memory address to store the value.
@@ -147,10 +220,19 @@ class SpaceCatVirtualMachine:
         """
         self.memory.store(memory_address_to_move, self.registers.retrieve(register_address_source))
 
-    def jump(self, instruction_to_jump) -> None:
+    def jump(self, instruction_to_jump: int) -> None:
         """
         Jump to an instruction residing in memory.
         :param instruction_to_jump: Instruction address to jump.
         :return: None.
         """
         self.set_instruction_pointer(instruction_to_jump)
+
+    def do_continue(self) -> None:
+        """
+        Continue to the next statement
+        :return: None.
+        """
+        self.next_instruction()
+        self.increment_instruction_pointer()
+        self.update_program_counter()
