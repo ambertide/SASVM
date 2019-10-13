@@ -38,6 +38,6 @@ class Octoneko(SpaceCatVirtualMachine):
             self.do_continue()
 
 if __name__ == "__main__":
-    svm = Octoneko()
+    svm = Octoneko(preload_memory=[0, ])
     while svm.can_continue:
         svm.do_continue()

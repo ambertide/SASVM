@@ -35,10 +35,9 @@ class ParsedInstruction:
     """
     args: Tuple[str, ...]
     method: Callable
-    base: int
 
     def execute(self):
-        args_parsed = tuple(int(arg, self.base) for arg in self.args)
+        args_parsed = tuple(int(arg) for arg in self.args)
         self.method(*args_parsed)
 
 
@@ -95,18 +94,17 @@ class _MemorySpace:
         """
         op_code_operation = self.retrieve(memory_location)
         op_code_operands = self.retrieve(memory_location + 1)
-        return f"{op_code_operation:X}{op_code_operands:X}"
+        return f"{op_code_operation:02X}{op_code_operands:02X}"
 
 
 class InternalParser:
     """
     Parses the machine instructions to pythonic methods and functions.
     """
-    def __init__(self, bit_size: int):
+    def __init__(self):
         """
         Initialise the InternalParser
         """
-        self.BIT_SIZE: int = bit_size
         self.instruction_to_method: Dict[Pattern, Callable] = {}
         self.instruction_to_argument_map: Dict[Pattern, Tuple[Pattern]] = {}
 
@@ -124,10 +122,10 @@ class InternalParser:
                 args_pattern_tuple = self.instruction_to_argument_map[pattern]
                 try:
                     args = tuple(arg_pattern.search(pattern).group()[0] for
-                                arg_pattern in args_pattern_tuple)  # type: ignore
+                                 arg_pattern in args_pattern_tuple)  # type: ignore
                 except AttributeError:
                     raise InvalidInstructionException(f"Instruction {pattern} failed to resolve.")
-        return ParsedInstruction(args=args, method=method, base=self.BIT_SIZE)
+        return ParsedInstruction(args=args, method=method)
 
 
 class SpaceCatVirtualMachine:
@@ -152,7 +150,7 @@ class SpaceCatVirtualMachine:
         self.registers = _MemorySpace(bit_size=bit_size, size=register_size)
         self.instruction_pointer: int = 0
         self.program_counter: str = self.memory.retrieve_instruction(self.instruction_pointer)
-        self.internalParser: InternalParser = InternalParser(self.BIT_SIZE)
+        self.internalParser: InternalParser = InternalParser()
 
     def next_instruction(self) -> None:
         """
