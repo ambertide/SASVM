@@ -9,10 +9,12 @@ class Preprocessor:
                 self.data = file.read()
         else:
             self.data = file_str
-            self.terminal_sign = terminal_sign
+        self.terminal_sign = terminal_sign
         self.data = self.process_data()
 
     def process_data(self) -> List[str]:
         intermediate: List[str] = self.data.split(self.terminal_sign)
+        while '' in intermediate:
+            intermediate.remove('')
         intermediate = list(map(lambda x: x + ";", intermediate))
         return intermediate

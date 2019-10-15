@@ -15,14 +15,14 @@ class SVMAssembler:
         self._intermediate_memory: List[str] = []
         self.instructions = instructions
         self.command_to_op_code: Dict[str, str] = {}
-        self.args_regex: Pattern = compile(r"(?<=\s)\w+(?=,)|(?<=, )\w+(?=,)|(?<=, )\w+(?=;)")
+        self.args_regex: Pattern = compile(r"(?<=\s)\w+(?=,)|(?<=,)\w+(?=,)|(?<=,)\w+(?=;)")
 
     def _trim_instructions(self) -> None:
         """
         Trim the excess spaces themselves and those around punctuations.
         :return: None.
         """
-        trim_punctuation: Pattern = compile(r"(?<=,)\s+|\s+(?=,)|\s+(?=;)")
+        trim_punctuation: Pattern = compile(r"(?<=,)\s+|\s+(?=,)|\s+(?=;)|\n")
         trim_space: Pattern = compile(r"\s+")
         for i, instruction in enumerate(self.instructions):
             instruction = trim_punctuation.sub("", instruction)
@@ -37,7 +37,7 @@ class SVMAssembler:
             instruction_base: str = instruction.split(" ")[0]
             if instruction_base in self.command_to_op_code:
                 op_code: str = self.command_to_op_code[instruction_base]
-                args: Tuple[str, ...] = tuple(self.args_regex.findall(instruction_base))  # type: ignore
+                args: Tuple[str, ...] = tuple(self.args_regex.findall(instruction))  # type: ignore
                 self._intermediate_memory.append(op_code + "".join(args))
 
     def _convert_to_integer(self) -> None:

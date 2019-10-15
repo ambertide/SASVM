@@ -121,7 +121,7 @@ class InternalParser:
                 method = self.instruction_to_method[pattern]
                 args_pattern_tuple = self.instruction_to_argument_map[pattern]
                 try:
-                    args = tuple(arg_pattern.search(pattern).group()[0] for
+                    args = tuple(arg_pattern.search(instruction).group()[0] for
                                  arg_pattern in args_pattern_tuple)  # type: ignore
                 except AttributeError:
                     raise InvalidInstructionException(f"Instruction {pattern} failed to resolve.")
