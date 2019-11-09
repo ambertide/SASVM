@@ -148,7 +148,7 @@ class Assembler:
     three_register_op_codes = {"addi":"5", "addf":"6", "or":"7", "and":"8", "xor":"9"}
 
     def __init__(self, string: str, mem_size: int):
-        self.__memory: List[Cell] = [Cell() for _ in range(mem_size)]
+        self.memory: List[Cell] = [Cell() for _ in range(mem_size)]
         self.string: str = string
         self.__cleaned_string: str = ""
 
@@ -322,10 +322,10 @@ class Assembler:
                 for operand in operands:
                     if type(operand) == str:
                         for char in operand:
-                            self.__memory[memory_pointer].value = ord(char)
+                            self.memory[memory_pointer].value = ord(char)
                             memory_pointer += 1
                     elif type(operand) == int:
-                        self.__memory[memory_pointer].value = int(operand, 16)
+                        self.memory[memory_pointer].value = int(operand, 16)
                         memory_pointer += 1
             elif line.startswith("load"):
                 register, operand = operands.split(",")
@@ -376,8 +376,8 @@ class Assembler:
             elif line.startswith("jmp"):
                 instruction = "B0" + operands
             if instruction:
-                self.__memory[memory_pointer].value, self.__memory[memory_pointer + 1].value = int(instruction[0:2], base= 16),\
-                                                                                   int(instruction[2:4], base=16)
+                self.memory[memory_pointer].value, self.memory[memory_pointer + 1].value = int(instruction[0:2], base= 16), \
+                                                                                           int(instruction[2:4], base=16)
                 memory_pointer += 2
                 instruction = ""
 
@@ -393,6 +393,7 @@ class Simulator:
         :param register_size: Size of the registers
         """
         self.__memory = [Cell() for _ in range(mem_size)]
+        self.mem_size = mem_size
         self.__registers = [Cell() for _ in range(register_size)]
         self.IR: str = "0000"  # Current instruction under execution.
         self.PC: int = 0  # Next value index.
@@ -526,14 +527,20 @@ class Simulator:
         return self
 
     def load_memory(self, memory: List[Cell]):
-        for i, cell in enumerate(memory):
-            self.__memory[i] = cell
+        self.__memory = memory
 
-    def parse_program_memory(self, bytes_list: List[bytes]):
-
+    def parse_program_memory(self, bytes_list: bytes):
+        actual_bytes = [bytes_list[4*i] for i in range(len(bytes_list)//4)]
+        empty_mem = [Cell() for _ in range(self.mem_size)]
+        for i, byte in enumerate(actual_bytes):
+            empty_mem[i].value = byte
+        self.load_memory(empty_mem)
 
         
 if __name__ == "__main__":
-    with open("ceyda.asm") as file:
-        ase = Assembler(file.read(), 256)
-        ase.main()
+    with open("file.asm") as file:
+        assembler = Assembler(file.read(), 256)
+    simulator = Simulator(256, 256)
+    simulator.load_memory(assembler.memory)
+    for _ in simulator:
+        continue
