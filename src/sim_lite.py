@@ -1,7 +1,146 @@
-from typing import List, Dict
+from typing import List, Dict, Union, Callable
 from re import sub
 from re import compile as regex_compile
+
+
+def right_shift(x: str, y: int) -> str:
+    """
+    Right shift x by a factor of y
+    :param x: Bit-pattern to shift
+    :param y: Shifting factor
+    :return: Shifted bit-pattern
+    """
+    bit_length = len(x)
+    new_bit = ""
+    for i in range(bit_length - y):
+        new_bit += "0"
+    for i in range(y):
+        new_bit += x[i]
+    return new_bit
+
+
+def right_rotation(x: str, y: int) -> str:
+    """
+    Rotate x right by a factor of y
+    :param x: Bitstring to rotate.
+    :param y: Rotation factor.
+    :return: Rotated bit.
+    """
+    new_bit = ""
+    for i in range(y, len(x)):
+        new_bit += x[i]
+    for i in range(y):
+        new_bit += x[i]
+    return new_bit
+
+
+class OctalFloat:
+    """
+    Implementation of 8-Bit Semi-IEEE 754 compliant Floating Point Numerals
+    """
+    __bias: int = 8
+
+    def __init__(self, hex_rep: str):
+        binary_representation = format(int(hex_rep, base=16), "08b")
+        self.__binary_representation = binary_representation
+        self.__sign: int = (-1) ** int(binary_representation[0], base=2)
+        self.__exponent = int(binary_representation[1:4], base=2) - self.__bias
+        self.__mantissa = int(binary_representation[4:], base=2)
+
+    def __float__(self) -> float:
+        """
+        Convert the number into float.
+        :return:
+        """
+        return self.__sign * (self.__mantissa**self.__exponent)
+
+    def __add__(self, other: "OctalFloat") -> "OctalFloat":
+        """
+        Add to OctalFloat's together
+        :param other: Other OctoFloat to add
+        :return: Sum of two OctoFloats, possibly overflown.
+        """
+        exponent_difference: int = other.__exponent - self.__exponent
+        if exponent_difference >= 0:
+            operated_mantissa = right_shift(format(self.__mantissa, "04b"), exponent_difference)
+            operated = self
+            operand = other
+        else:
+            operated_mantissa = right_shift(format(other.__mantissa, "04b"), abs(exponent_difference))
+            operated = other
+            operand = self
+        number_whole: int = int(operated_mantissa, base=2) * operated.__sign + operand.__mantissa * operand.__sign
+        new_sign = "0" if number_whole >= 0 else "1"
+        new_mantissa = format(abs(number_whole), "04b")[:4]
+        new_exponent = format(operand.__sign + self.__bias, "03b")
+        return OctalFloat(new_sign + new_exponent + new_mantissa)
+
+    def __str__(self) -> str:
+        """
+        Convert to string.
+        :return:
+        """
+        return format(int(self.__binary_representation, base=2), "02X")
+
+    def __int__(self) -> int:
+        """
+        Convert to integer
+        :return:
+        """
+        return int(self.__binary_representation, base=2)
+
+    def __repr__(self) -> str:
+        """
+        String representation for printing and debugging.
+        :return:
+        """
+        return self.__binary_representation
+
+
+class Cell:
+    """
+    A memory cell.
+    """
+    def __init__(self):
+        """
+        Initialise a memory cell.
+        """
+        self.__value: int = 0
+
+    @property
+    def binary_value(self):
+        """
+        :return: Binary value of the value.
+        """
+        return format(self.__value, "08b")
+
+    @property
+    def value(self):
+        """
+        Get the value of the cell
+        :return: Integer value of the cell.
+        """
+        return self.__value
+
+    @value.setter
+    def value(self, value: Union[str, int]):
+        """
+        Set the value of the cell, probably overflown.
+        :param value: New value to set
+        :return: None
+        """
+        if type(value) == str:
+            value = int(value, base=16)
+        self.__value = value % 256
+
+    def __repr__(self) -> str:
+        return format(self.__value, "02X")
+
+
 class Assembler:
+    """
+    Assembler for the simulator language.
+    """
     comment_pattern = regex_compile(r";.*")
     org_pattern = regex_compile(r"(?<=org )\w+")
     string_pattern = regex_compile(r"\"\w+\"|'\w+'")
@@ -9,7 +148,7 @@ class Assembler:
     three_register_op_codes = {"addi":"5", "addf":"6", "or":"7", "and":"8", "xor":"9"}
 
     def __init__(self, string: str, mem_size: int):
-        self.__memory: List[int] = [0 for _ in range(mem_size)]
+        self.__memory: List[Cell] = [Cell() for _ in range(mem_size)]
         self.string: str = string
         self.__cleaned_string: str = ""
 
@@ -183,10 +322,10 @@ class Assembler:
                 for operand in operands:
                     if type(operand) == str:
                         for char in operand:
-                            self.__memory[memory_pointer] = ord(char)
+                            self.__memory[memory_pointer].value = ord(char)
                             memory_pointer += 1
                     elif type(operand) == int:
-                        self.__memory[memory_pointer] = int(operand, 16)
+                        self.__memory[memory_pointer].value = int(operand, 16)
                         memory_pointer += 1
             elif line.startswith("load"):
                 register, operand = operands.split(",")
@@ -237,24 +376,164 @@ class Assembler:
             elif line.startswith("jmp"):
                 instruction = "B0" + operands
             if instruction:
-                self.__memory[memory_pointer], self.__memory[memory_pointer + 1] = int(instruction[0:2], base= 16),\
+                self.__memory[memory_pointer].value, self.__memory[memory_pointer + 1].value = int(instruction[0:2], base= 16),\
                                                                                    int(instruction[2:4], base=16)
                 memory_pointer += 2
                 instruction = ""
 
-    def main(self):
-        self.__parse()
-        i = 0
-        for num in self.__memory:
-            print(format(num, "02X"), end=" ")
-            i+=1
-            if i % 16 == 0:
-                print()
 
 class Simulator:
-    def __init__(self):
+    """
+    Simulator for the simulator.
+    """
+    def __init__(self, mem_size: int, register_size: int):
+        """
+        Initialise the simulator
+        :param mem_size: Size of the memory
+        :param register_size: Size of the registers
+        """
+        self.__memory = [Cell() for _ in range(mem_size)]
+        self.__registers = [Cell() for _ in range(register_size)]
+        self.IR: str = "0000"  # Current instruction under execution.
+        self.PC: int = 0  # Next value index.
+        self.__can_continue: bool = True
+        self.__op_code_method: Dict[str, Callable] = {
+            "1": lambda: self.__direct_load(),
+            "2": lambda: self.__immediate_load(),
+            "3": lambda: self.__direct_store(),
+            "4": lambda: self.__move(),
+            "5": lambda: self.__integer_addition(),
+            "6": lambda: self.__floating_point_addition(),
+            "7": lambda: self.__bitwise_or(),
+            "8": lambda: self.__bitwise_and(),
+            "9": lambda: self.__bitwise_exclusive_or(),
+            "A": lambda: self.__rotate_right(),
+            "B": lambda: self.__jump_when_equal(),
+            "C": lambda: self.__halt(),
+            "D": lambda: self.__indirect_load(),
+            "E": lambda: self.__indirect_store(),
+            "F": lambda: self.__jump_when_less_or_equal()
+        }
+        self.check_reference_register = lambda: self.__registers[0].value
+
+    def __immediate_load(self):
+        register_index = self.IR[1]
+        value = self.IR[2:]
+        self.__registers[int(register_index, base=16)].value = value
+
+    def __direct_load(self):
+        register_index = self.IR[1]
+        memory_index = self.IR[2:]
+        self.__registers[int(register_index, base=16)].value = self.__memory[int(memory_index, base=16)].value
+
+    def __indirect_load(self):
+        register_index = self.IR[2]
+        memory_index_register_index = self.IR[3]
+        memory_index = self.__registers[int(memory_index_register_index, base=16)].value
+        self.__registers[int(register_index, base=16)].value = self.__memory[memory_index].value
+
+    def __direct_store(self):
+        register_index = self.IR[1]
+        memory_index = self.IR[2:]
+        self.__memory[int(memory_index, base=16)].value = self.__registers[int(register_index, base=16)]
+
+    def __indirect_store(self):
+        register_index = self.IR[2]
+        memory_index_register_index = self.IR[3]
+        memory_index = self.__registers[int(memory_index_register_index, base=16)].value
+        self.__memory[memory_index].value = self.__registers[int(register_index, base=16)]
+
+    def __move(self):
+        register_sender_index: int = int(self.IR[2], base=16)
+        register_receiver_index: int = int(self.IR[3], base=16)
+        self.__registers[register_receiver_index].value = self.__registers[register_sender_index].value
+
+    def __integer_addition(self):
+        register_receiver_index: int = int(self.IR[1], base=16)
+        register_operand_one: int = int(self.IR[2], base=16)
+        register_operand_two: int = int(self.IR[3], base=16)
+        self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value + \
+                                                          self.__registers[register_operand_two].value
+
+    def __floating_point_addition(self):
+        register_receiver_index: int = int(self.IR[1], base=16)
+        register_operand_one: int = int(self.IR[2], base=16)
+        register_operand_two: int = int(self.IR[3], base=16)
+        num_one = OctalFloat(str(self.__registers[register_operand_one]))
+        num_two = OctalFloat(str(self.__registers[register_operand_two]))
+        result = num_one + num_two
+        self.__registers[register_receiver_index].value = int(result)
+
+    def __bitwise_or(self):
+        register_receiver_index: int = int(self.IR[1], base=16)
+        register_operand_one: int = int(self.IR[2], base=16)
+        register_operand_two: int = int(self.IR[3], base=16)
+        self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value | \
+                                                          self.__registers[register_operand_two].value
+
+    def __bitwise_and(self):
+        register_receiver_index: int = int(self.IR[1], base=16)
+        register_operand_one: int = int(self.IR[2], base=16)
+        register_operand_two: int = int(self.IR[3], base=16)
+        self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value & \
+                                                          self.__registers[register_operand_two].value
+
+    def __bitwise_exclusive_or(self):
+        register_receiver_index: int = int(self.IR[1], base=16)
+        register_operand_one: int = int(self.IR[2], base=16)
+        register_operand_two: int = int(self.IR[3], base=16)
+        self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value ^ \
+                                                          self.__registers[register_operand_two].value
+
+    def __rotate_right(self):
+        register_to_rotate_index: int = int(self.IR[1], base=16)
+        rotate_by: int = int(self.IR[3], base=16)
+        self.__registers[register_to_rotate_index].value = int(right_rotation(self.__registers[register_to_rotate_index].binary_value, rotate_by), base=2)
+
+    def __jump_when_equal(self):
+        register_to_check_index = int(self.IR[1], base=16)
+        jump_to = int(self.IR[2:], base=16)
+        if self.__registers[register_to_check_index] == self.check_reference_register:
+            self.PC = jump_to
+
+    def __jump_when_less_or_equal(self):
+        register_to_check_index = int(self.IR[1], base=16)
+        jump_to = int(self.IR[2:], base=16)
+        if self.__registers[register_to_check_index] <= self.check_reference_register:
+            self.PC = jump_to
+
+    def __unconditional_jump(self):
+        jump_to = int(self.IR[2:], base=16)
+        self.PC = jump_to
+
+    def __halt(self):
+        self.__can_continue = False
+
+    def __execute(self):
+        if self.IR[:2] == "B0":
+            self.__unconditional_jump()
+        else:
+            self.__op_code_method[self.IR[0]]()
+
+    def __next__(self):
+        if not self.__can_continue:
+            raise StopIteration
+        self.IR = str(self.__memory[self.PC]) + str(self.__memory[self.PC + 1])
+        self.PC += 2
+        self.__execute()
+
+    def __iter__(self):
+        return self
+
+    def load_memory(self, memory: List[Cell]):
+        for i, cell in enumerate(memory):
+            self.__memory[i] = cell
+
+    def parse_program_memory(self, bytes_list: List[bytes]):
+
+
         
 if __name__ == "__main__":
     with open("ceyda.asm") as file:
-        ase = Assembler(file.read(), 120)
+        ase = Assembler(file.read(), 256)
         ase.main()
