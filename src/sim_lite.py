@@ -1,7 +1,11 @@
 from typing import List, Dict, Union, Callable
 from re import sub
 from re import compile as regex_compile
+from os import system
 
+
+def clear_screen():
+    system("cls")
 
 def right_shift(x: str, y: int) -> str:
     """
@@ -153,6 +157,12 @@ class Assembler:
         self.__cleaned_string: str = ""
 
     @staticmethod
+    def instantiate(*args, **kwargs) -> "Assembler":
+        assembler_ = Assembler(*args, **kwargs)
+        assembler_.__parse()
+        return assembler_
+
+    @staticmethod
     def __convert_numeral(string: str) -> str:
         """
         Convert a assembly numeral into a hexadecimal numeral
@@ -298,10 +308,8 @@ class Assembler:
         self.__cleaned_string = self.__strip_comments_spaces_tabs(self.string)
         self.__cleaned_string = self.__replace_labels(self.__cleaned_string)
         lines = self.__cleaned_string.split("\n")
-        print(self.__cleaned_string)
         self.__cleaned_string = self.convert_numerals_hexadecimal(self.__cleaned_string)
         lines = self.__cleaned_string.split("\n")
-        print(self.__cleaned_string)
         memory_pointer: int = 0
         instruction = ""
         for line in lines:
@@ -310,7 +318,6 @@ class Assembler:
             mnemonic, operands = "", ""
             if line.startswith("org"):
                 org_pointer: str = line.strip("org ")
-                print(f"{org_pointer=}")
                 memory_pointer = int(org_pointer, base=16)
                 continue
             if line == "halt":
@@ -413,9 +420,11 @@ class Simulator:
             "C": lambda: self.__halt(),
             "D": lambda: self.__indirect_load(),
             "E": lambda: self.__indirect_store(),
-            "F": lambda: self.__jump_when_less_or_equal()
+            "F": lambda: self.__jump_when_less_or_equal(),
+            "0": lambda: self.__invalid
         }
         self.check_reference_register = lambda: self.__registers[0].value
+        self.__jmp = False
 
     def __immediate_load(self):
         register_index = self.IR[1]
@@ -456,6 +465,9 @@ class Simulator:
         self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value + \
                                                           self.__registers[register_operand_two].value
 
+    def __invalid(self):
+        pass
+
     def __floating_point_addition(self):
         register_receiver_index: int = int(self.IR[1], base=16)
         register_operand_one: int = int(self.IR[2], base=16)
@@ -494,17 +506,20 @@ class Simulator:
     def __jump_when_equal(self):
         register_to_check_index = int(self.IR[1], base=16)
         jump_to = int(self.IR[2:], base=16)
-        if self.__registers[register_to_check_index] == self.check_reference_register:
+        self.__jmp = True
+        if self.__registers[register_to_check_index] == self.__registers[0]:
             self.PC = jump_to
 
     def __jump_when_less_or_equal(self):
         register_to_check_index = int(self.IR[1], base=16)
         jump_to = int(self.IR[2:], base=16)
+        self.__jmp = True
         if self.__registers[register_to_check_index] <= self.check_reference_register:
             self.PC = jump_to
 
     def __unconditional_jump(self):
         jump_to = int(self.IR[2:], base=16)
+        self.__jmp = True
         self.PC = jump_to
 
     def __halt(self):
@@ -519,9 +534,15 @@ class Simulator:
     def __next__(self):
         if not self.__can_continue:
             raise StopIteration
+        if self.PC == 256:
+            raise StopIteration
         self.IR = str(self.__memory[self.PC]) + str(self.__memory[self.PC + 1])
-        self.PC += 2
+        if not self.__jmp:
+            self.PC += 2
+        else:
+            self.__jmp = False
         self.__execute()
+        return self.__memory, self.__registers
 
     def __iter__(self):
         return self
@@ -536,11 +557,30 @@ class Simulator:
             empty_mem[i].value = byte
         self.load_memory(empty_mem)
 
-        
+    def return_memory(self):
+        return self.__memory
+
+    def return_registers(self):
+        return self.__registers
+
+def mem_print(mem: List[Cell]):
+    for i in range(16, 256, 16):
+        for j in range(i - 16, i):
+            print(str(mem[j]), end=" ")
+        print()
+
 if __name__ == "__main__":
-    with open("file.asm") as file:
-        assembler = Assembler(file.read(), 256)
-    simulator = Simulator(256, 256)
-    simulator.load_memory(assembler.memory)
-    for _ in simulator:
+    cpu_cycle = 0
+#    with open("ceyda.asm") as file:
+#        assembler = Assembler.instantiate(file.read(), 256)
+    simulator = Simulator(256, 16)
+#    simulator.load_memory(assembler.memory)
+#    mem_print(assembler.memory)
+    with open("example_prog_file.prg", "rb") as file:
+        simulator.parse_program_memory(file.read())
+    mem_print(simulator.return_memory())
+    for memory, registers in simulator:
+        cpu_cycle += 1
         continue
+    mem_print(simulator.return_memory())
+    print(simulator.return_registers())
