@@ -11,7 +11,6 @@ def convert_numeral(string: str) -> str:
     :return:
     """
     return_num: int = 0
-    pointer_flag: bool = string.startswith("[") and string.endswith("]")
     string = string.strip("[").strip("]")
     replacement_dict = {
         'b': 2,
@@ -24,8 +23,11 @@ def convert_numeral(string: str) -> str:
     for identifier in replacement_dict:
         if identifier in string:
             string = string.replace(identifier, '')
-            return_num = int(string, base=replacement_dict[identifier])
-    if pointer_flag:
+            try:
+                return_num = int(string, base=replacement_dict[identifier])
+            except ValueError:
+                raise SyntaxError
+    if string.startswith("[") and string.endswith("]"):  # If number is a pointer.
         return "[" + format(return_num, "02X") + "]"
     return format(return_num, "02X")
 
