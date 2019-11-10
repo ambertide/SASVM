@@ -11,20 +11,20 @@ def convert_numeral(string: str) -> str:
     :return:
     """
     return_num: int = 0
-    pointer_flag: bool = False
-    if string.startswith("[") and string.endswith("]"):
-        string = string.strip("[").strip("]")
-        pointer_flag = True
-    if string.endswith('b'):
-        return_num = int(string.replace('b', ''), base=2)
-    elif string.startswith(s := '0x') or string.startswith(s := '$') or string.endswith(s := 'h'):
-        return_num = int(string.replace(s, ''), base=16)
-    elif string.startswith('-'):
-        return_num = int(string.replace('-', ''))
-    elif string.isnumeric():
-        return_num = int(string)
-    else:
-        raise SyntaxError(f'{string} is not a number.')
+    pointer_flag: bool = string.startswith("[") and string.endswith("]")
+    string = string.strip("[").strip("]")
+    replacement_dict = {
+        'b': 2,
+        '0x': 16,
+        '$': 16,
+        'h': 16,
+        '-': 10,
+        '': 10
+    }
+    for identifier in replacement_dict:
+        if identifier in string:
+            string = string.replace(identifier, '')
+            return_num = int(string, base=replacement_dict[identifier])
     if pointer_flag:
         return "[" + format(return_num, "02X") + "]"
     return format(return_num, "02X")
