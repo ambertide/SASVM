@@ -33,9 +33,9 @@ def right_rotation(x: str, y: int) -> str:
     return new_bit
 
 
-
 def clear_screen():
     system("cls")
+
 
 class OctalFloat:
     """
@@ -140,25 +140,8 @@ class Cell:
         return format(self.__value, "02X")
 
 
-
 def mem_print(mem: List[Cell]):
     for i in range(16, 256, 16):
         for j in range(i - 16, i):
             print(str(mem[j]), end=" ")
         print()
-
-if __name__ == "__main__":
-    cpu_cycle = 0
-#    with open("ceyda.asm") as file:
-#        assembler = Assembler.instantiate(file.read(), 256)
-    simulator = Simulator(256, 16)
-#    simulator.load_memory(assembler.memory)
-#    mem_print(assembler.memory)
-    with open("example_prog_file.prg", "rb") as file:
-        simulator.parse_program_memory(file.read())
-    mem_print(simulator.return_memory())
-    for memory, registers in simulator:
-        cpu_cycle += 1
-        continue
-    mem_print(simulator.return_memory())
-    print(simulator.return_registers())

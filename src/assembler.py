@@ -23,10 +23,7 @@ def convert_numeral(string: str) -> str:
     for identifier in replacement_dict:
         if identifier in string:
             string = string.replace(identifier, '')
-            try:
-                return_num = int(string, base=replacement_dict[identifier])
-            except ValueError:
-                raise SyntaxError
+            return_num = int(string, base=replacement_dict[identifier])
     if string.startswith("[") and string.endswith("]"):  # If number is a pointer.
         return "[" + format(return_num, "02X") + "]"
     return format(return_num, "02X")
@@ -101,7 +98,7 @@ class Assembler:
             for i, operand in enumerate(operands):
                 try:
                     operands[i] = convert_numeral(operand)
-                except SyntaxError:
+                except ValueError:
                     continue
             converted_string += ' '.join((mnemonic, ','.join(operands))) + "\n"
         return converted_string
