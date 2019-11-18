@@ -1,8 +1,8 @@
-from tkinter import Tk, Label, Canvas, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, SUNKEN, FLAT
+from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT
 from typing import List, Dict, TypeVar
-from simulator import Simulator
-from common_utils import Cell, OctalFloat
-
+from spacecat.simulator import Simulator
+from spacecat.common_utils import Cell
+from spacecat.assembler import Assembler
 
 T = TypeVar("T")
 
@@ -46,7 +46,6 @@ class SpaceCatSimulator:
         self.registers = [Entry(master=self.register_canvas, width=3) for _ in range(self.REGISTER_SIZE)]
         self.__populate_canvases()
 
-
         self.__run = Button(master=self.buttons_frame, text="Run", relief=FLAT)
         self.__step = Button(master=self.buttons_frame, text="Step", relief=FLAT)
         self.__editor = Button(master=self.buttons_frame, text="Editor", relief=FLAT)
@@ -60,7 +59,7 @@ class SpaceCatSimulator:
 
         self.menubar = Menu(self.master, relief=RAISED)
         self.file_menu = Menu(self.menubar)
-        self.file_menu.add_command(label="Open", command=lambda: None)
+        self.file_menu.add_command(label="Open", command=self.open_file)
         self.file_menu.add_command(label="Save Machine State", command=lambda: None)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=lambda: quit())
@@ -75,11 +74,25 @@ class SpaceCatSimulator:
         self.register_canvas.pack()
         self.bottom_bar.pack(fill="x", side=BOTTOM)
 
+    def open_file(self):
+        file_name: str = filedialog.askopenfilename(title="Select file", filetypes=(("Assembly source code", "*.asm"),
+                                                                                   ("SimpSim Memory State", "*.prg"),
+                                                                                   ("SpaceCat Machine State", "*.svm")))
+        if file_name.endswith(".asm"):
+            assembler: Assembler = Assembler.instantiate(open(file_name, "r").read(), 256)
+            self.__machine.load_memory(assembler.memory)
+            self.__update_view(self.__machine.return_memory(), self.__machine.return_registers())
 
     def on_click(self, event: Event):
+        """
+        When clicked over an event.
+        :param event:
+        :return:
+        """
         value = event.widget.get()
         real_val = int(value, base=16)
         self.bottom_bar["text"] = f"Decimal Value: {real_val}\tHexadecimal Value:{real_val:02X}\tBinary Value: {real_val:08b}"
+
     def __populate_canvases(self):
         """
         Populate the canvases by drawing entry fields into them.
@@ -127,6 +140,8 @@ class SpaceCatSimulator:
         for change_index, new_value in register_differences:
             self.registers[change_index].delete(0, END)
             self.registers[change_index].insert(0, str(new_memory))
+
+
 
 if __name__ == "__main__":
     root = Tk()

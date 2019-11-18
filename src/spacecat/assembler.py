@@ -1,16 +1,17 @@
 from re import sub
 from re import compile as regex_compile
 from typing import Dict, List
-from common_utils import Cell
+from spacecat.common_utils import Cell
 
 
 def convert_numeral(string: str) -> str:
     """
     Convert a assembly numeral into a hexadecimal numeral
-    :param string:
-    :return:
+    :param string: A string representation of a simpSim numeral
+    :return: Hexadecimal representation of the numeral
     """
     return_num: int = 0
+    is_pointer: bool = string.startswith("[") and string.endswith("]")
     string = string.strip("[").strip("]")
     replacement_dict = {
         'b': 2,
@@ -24,7 +25,8 @@ def convert_numeral(string: str) -> str:
         if identifier in string:
             string = string.replace(identifier, '')
             return_num = int(string, base=replacement_dict[identifier])
-    if string.startswith("[") and string.endswith("]"):  # If number is a pointer.
+            break
+    if is_pointer:  # If number is a pointer.
         return "[" + format(return_num, "02X") + "]"
     return format(return_num, "02X")
 
@@ -169,7 +171,6 @@ class Assembler:
         """
         self.__cleaned_string = self.__strip_comments_spaces_tabs(self.string)
         self.__cleaned_string = self.__replace_labels(self.__cleaned_string)
-        lines = self.__cleaned_string.split("\n")
         self.__cleaned_string = self.convert_numerals_hexadecimal(self.__cleaned_string)
         lines = self.__cleaned_string.split("\n")
         memory_pointer: int = 0
@@ -249,3 +250,7 @@ class Assembler:
                                                                                            int(instruction[2:4], base=16)
                 memory_pointer += 2
                 instruction = ""
+
+if __name__ == "__main__":
+    with open("ceyda.asm", "r") as file:
+        Assembler.instantiate(file.read(), 256)

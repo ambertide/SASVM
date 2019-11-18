@@ -1,5 +1,5 @@
 from typing import List, Dict, Callable
-from common_utils import Cell, right_rotation, OctalFloat
+from spacecat.common_utils import Cell, right_rotation, OctalFloat
 
 class Simulator:
     """
@@ -160,17 +160,35 @@ class Simulator:
         return self
 
     def load_memory(self, memory: List[Cell]):
+        """
+        Load the memory from a given list of Cells.
+        :param memory: Memory to load.
+        :return:
+        """
         self.__memory = memory
 
     def parse_program_memory(self, bytes_list: bytes):
+        """
+        Parse the memory of a *.prg file.
+        :param bytes_list:
+        :return:
+        """
         actual_bytes = [bytes_list[4*i] for i in range(len(bytes_list)//4)]
         empty_mem = [Cell() for _ in range(self.mem_size)]
         for i, byte in enumerate(actual_bytes):
             empty_mem[i].value = byte
         self.load_memory(empty_mem)
 
-    def return_memory(self):
+    def return_memory(self) -> List[Cell]:
+        """
+        Return memory.
+        :return: the memory.
+        """
         return self.__memory
 
-    def return_registers(self):
+    def return_registers(self) -> List[Cell]:
+        """
+        Return the registers
+        :return: the registers.
+        """
         return self.__registers
