@@ -16,8 +16,6 @@ def get_difference(previous_list: List[T], current_list: List[T]) -> Dict[int, T
     :param current_list: Second iteration of the list
     :return: The indices and new values of the changed cells of the list as a dictionary.
     """
-    print(previous_list)
-    print(current_list)
     diff_dict: Dict[int, T] = {i: new_value for i, new_value in
                                enumerate(current_list) if new_value != previous_list[i]}
     return diff_dict
@@ -87,7 +85,8 @@ class SpaceCatSimulator:
 
     def __run_machine(self):
         self.__step()
-        self.master.after(500, self.__run_machine)
+        if self.ir.get() != "0000":
+            self.master.after(500, self.__run_machine)
 
     def __step(self):
         memory_cells, register_cells = self.__machine.__next__()
