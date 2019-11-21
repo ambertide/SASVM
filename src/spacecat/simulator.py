@@ -192,3 +192,11 @@ class Simulator:
         :return: the registers.
         """
         return self.__registers
+
+    def reset_special_registers(self) -> None:
+        """
+        Reset the special registers
+        :return: None
+        """
+        self.PC = 0
+        self.IR = "0000"

@@ -139,6 +139,11 @@ class Cell:
     def __repr__(self) -> str:
         return format(self.__value, "02X")
 
+    def __eq__(self, other):
+        if isinstance(other, Cell):
+            return other.value == self.value
+        else:
+            return False
 
 def mem_print(mem: List[Cell]):
     for i in range(16, 256, 16):

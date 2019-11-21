@@ -219,7 +219,7 @@ class Assembler:
                     instruction = "3" + register.strip("R") + memory_address_pointer.strip("[").strip("]")
             elif line.startswith("move"):
                 register, register_from = operands.split(",")
-                instruction = "40" + register.strip("R") + register_from.strip("R")
+                instruction = "40" + register_from.strip("R") + register.strip("R")
 
             elif line.startswith("addi"):
                 register, register_one, register_two = operands.split(",")
@@ -229,7 +229,7 @@ class Assembler:
                 instruction = "6" + register.strip("R") + register_one.strip("R") + register_two.strip("R")
             elif mnemonic in self.three_register_operations: # Arithmatic operations
                 instruction = self.three_register_op_codes[mnemonic] + \
-                              ''.join(map(lambda r : r.strip("R"), operands.split(",")))
+                              ''.join(map(lambda r: r.strip("R"), operands.split(",")))
             elif line.startswith("ror"):
                 register, number_of_rotations = operands.split(",")
                 if int(number_of_rotations) > 15:
