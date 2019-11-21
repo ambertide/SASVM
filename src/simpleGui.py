@@ -1,4 +1,4 @@
-from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT
+from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, messagebox
 from typing import List, Dict, TypeVar
 from spacecat.simulator import Simulator
 from spacecat.common_utils import Cell
@@ -33,6 +33,7 @@ class SpaceCatSimulator:
         self.master = master
         self.master.resizable(height=False, width=False)
         self.master.geometry("500x500")
+        self.master.iconbitmap("data\spacecat.ico")
         self.master.title("SpaceCat Simple Assembly Simulator")
 
         self.MEMORY_SIZE = 256
@@ -54,6 +55,8 @@ class SpaceCatSimulator:
             cell.bind("<Button-1>", self.on_click)
 
         self.registers = [Entry(master=self.register_canvas, width=3) for _ in range(self.REGISTER_SIZE)]
+        for register in self.registers:
+            register.bind("<Button-1>", self.on_click)
         self.__populate_canvases()
 
         self.__run = Button(master=self.buttons_frame, text="Run", relief=FLAT, command=self.__run_machine)
@@ -85,12 +88,18 @@ class SpaceCatSimulator:
 
     def __run_machine(self):
         self.__step()
-        if self.ir.get() != "0000":
+        try:
             self.master.after(500, self.__run_machine)
+        except StopIteration:
+            pass
 
     def __step(self):
-        memory_cells, register_cells = self.__machine.__next__()
-        self.__update_view(memory_cells, register_cells)
+        try:
+            memory_cells, register_cells = self.__machine.__next__()
+            self.__update_view(memory_cells, register_cells)
+        except StopIteration:
+            pass
+
 
     def open_file(self):
         """
