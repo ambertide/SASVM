@@ -146,9 +146,9 @@ class Assembler:
                 continue
             elif last_label_name: # If before came a label definition
                 address_str: str = Assembler.__org_compile(line) # Suceeding ORG definition is the mem. add. of label.
-                address = int(address_str, base=16) if address_str != "" else memory_address # Otherwise it is just the next
+                address: int = int(address_str, base=16) if address_str != "" else memory_address # Otherwise it is just the next
                 labels_memory_loc[last_label_name] = address
-                last_label_name = '' # Last label name is released so to go on evaluating.
+                last_label_name = ''  # Last label name is released so to go on evaluating.
                 if type(address) == str:
                     memory_address = address
             else:

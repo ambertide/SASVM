@@ -52,12 +52,12 @@ class SpaceCatSimulator:
         self.__populate_canvases()
 
         self.__run = Button(master=self.buttons_frame, text="Run", relief=FLAT, command=self.__run_machine)
-        self.__step = Button(master=self.buttons_frame, text="Step", relief=FLAT, command=self.__step)
+        self.__step_button = Button(master=self.buttons_frame, text="Step", relief=FLAT, command=self.__step)
         self.__editor = Button(master=self.buttons_frame, text="Editor", relief=FLAT)
         self.__disassemble = Button(master=self.buttons_frame, text="Disassemble", relief=FLAT)
 
         self.__run.grid(row=0, column=0)
-        self.__step.grid(row=0, column=1)
+        self.__step_button.grid(row=0, column=1)
         self.__editor.grid(row=0, column=2)
         self.__disassemble.grid(row=0, column=3)
 
