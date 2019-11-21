@@ -149,8 +149,8 @@ class Assembler:
                 address: int = int(address_str, base=16) if address_str != "" else memory_address # Otherwise it is just the next
                 labels_memory_loc[last_label_name] = address
                 last_label_name = ''  # Last label name is released so to go on evaluating.
-                if type(address) == str:
-                    memory_address = address
+                memory_address = address
+                memory_address += 2
             else:
                 # Any other command other than a label def or org statement is a mnemonic and will increment memory.
                 memory_address += 2

@@ -4,6 +4,7 @@ from spacecat.simulator import Simulator
 from spacecat.common_utils import Cell
 from spacecat.assembler import Assembler
 from copy import deepcopy
+from enum import Enum
 
 T = TypeVar("T")
 
@@ -20,6 +21,12 @@ def get_difference(previous_list: List[T], current_list: List[T]) -> Dict[int, T
     diff_dict: Dict[int, T] = {i: new_value for i, new_value in
                                enumerate(current_list) if new_value != previous_list[i]}
     return diff_dict
+
+
+class TICKS(Enum):
+    HIGH: int = 500
+    MEDIUM: int = 300
+    LOW: int = 100
 
 
 class SpaceCatSimulator:
@@ -79,8 +86,8 @@ class SpaceCatSimulator:
         self.bottom_bar.pack(fill="x", side=BOTTOM)
 
     def __run_machine(self):
-        for memory_cells, register_cells in self.__machine:
-            self.__update_view(memory_cells, register_cells)
+        self.__step()
+        self.master.after(500, self.__run_machine)
 
     def __step(self):
         memory_cells, register_cells = self.__machine.__next__()
