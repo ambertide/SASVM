@@ -1,5 +1,7 @@
-from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, messagebox
+from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel
 from typing import List, Dict, TypeVar
+
+from NeutronKitty import NeutronKitty
 from spacecat.simulator import Simulator
 from spacecat.common_utils import Cell
 from spacecat.assembler import Assembler
@@ -94,7 +96,8 @@ class SpaceCatSimulator:
             values.append(str(self.__memory_values[i]) + str(self.__memory_values[i + 1]))
         dis_ = disassemble(values)
         commands = filter(lambda x: x != "", dis_)
-        print('\n'.join(commands))
+        string = '\n'.join(commands)
+        neutron_kitty = NeutronKitty(Tk(), string)
 
     def __run_machine(self):
         self.__step()
@@ -109,7 +112,6 @@ class SpaceCatSimulator:
             self.__update_view(memory_cells, register_cells)
         except StopIteration:
             pass
-
 
     def open_file(self):
         """

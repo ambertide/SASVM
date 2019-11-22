@@ -15,7 +15,7 @@ class Instruction:
         variables_form = [self.variable_prefixes[i] + variable + self.variable_suffixes[i]
                           for i, variable in enumerate(variables)]
         variable_part = ', '.join(variables_form)
-        command = self.mnemonic_name + " " + variable_part
+        command = self.mnemonic_name + " " + variable_part + "; " + instruction
         return command
 
 
@@ -42,7 +42,8 @@ INSTRUCTIONS: Final[List['Instruction']] = [Instruction("1", "load", [(1, 2), (2
 
 def determine_instruction(instruction: str) -> str:
     for instruction_ in INSTRUCTIONS:
-        if instruction[0:2] == instruction_.immutable_byte_index or instruction[0:1] == instruction_.immutable_byte_index:
+        if instruction[0:2] == instruction_.immutable_byte_index or \
+           instruction[0:1] == instruction_.immutable_byte_index:
             return instruction_.construct(instruction)
     return ""
 
