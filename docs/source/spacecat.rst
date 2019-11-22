@@ -28,14 +28,6 @@ spacecat.simulator module
    :undoc-members:
    :show-inheritance:
 
-spacecat.test\_right\_rotation module
--------------------------------------
-
-.. automodule:: spacecat.test_right_rotation
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 
 Module contents
 ---------------
