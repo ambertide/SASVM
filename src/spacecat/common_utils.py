@@ -118,7 +118,7 @@ class Cell:
         return format(self.__value, "08b")
 
     @property
-    def value(self):
+    def value(self) -> int:
         """
         Get the value of the cell
         :return: Integer value of the cell.
@@ -126,7 +126,7 @@ class Cell:
         return self.__value
 
     @value.setter
-    def value(self, value: Union[str, int]):
+    def value(self, value: Union[str, int]) -> None:
         """
         Set the value of the cell, probably overflown.
         :param value: New value to set

@@ -5,6 +5,8 @@ from spacecat.common_utils import Cell
 from spacecat.assembler import Assembler
 from copy import deepcopy
 from enum import Enum
+from spacecat.disassembler import disassemble
+
 
 T = TypeVar("T")
 
@@ -62,7 +64,7 @@ class SpaceCatSimulator:
         self.__run = Button(master=self.buttons_frame, text="Run", relief=FLAT, command=self.__run_machine)
         self.__step_button = Button(master=self.buttons_frame, text="Step", relief=FLAT, command=self.__step)
         self.__editor = Button(master=self.buttons_frame, text="Editor", relief=FLAT)
-        self.__disassemble = Button(master=self.buttons_frame, text="Disassemble", relief=FLAT)
+        self.__disassemble = Button(master=self.buttons_frame, text="Disassemble", relief=FLAT, command=self.__dis)
 
         self.__run.grid(row=0, column=0)
         self.__step_button.grid(row=0, column=1)
@@ -85,6 +87,14 @@ class SpaceCatSimulator:
         self.memory_canvas.pack()
         self.register_canvas.pack()
         self.bottom_bar.pack(fill="x", side=BOTTOM)
+
+    def __dis(self) -> None:
+        values = []
+        for i in range(0, len(self.__memory_values), 2):
+            values.append(str(self.__memory_values[i]) + str(self.__memory_values[i + 1]))
+        dis_ = disassemble(values)
+        commands = filter(lambda x: x != "", dis_)
+        print('\n'.join(commands))
 
     def __run_machine(self):
         self.__step()
