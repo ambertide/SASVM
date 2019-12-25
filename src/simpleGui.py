@@ -78,7 +78,7 @@ class SpaceCatSimulator:
         self.menubar = Menu(self.master, relief=RAISED)
         self.file_menu = Menu(self.menubar)
         self.file_menu.add_command(label="Open", command=self.open_file)
-        self.file_menu.add_command(label="Save Machine State", command=lambda: None)
+        self.file_menu.add_command(label="Save Machine State", command=self.__save)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=lambda: quit())
         self.menubar.add_cascade(label="File", menu=self.file_menu)
@@ -92,6 +92,17 @@ class SpaceCatSimulator:
         self.register_canvas.pack()
         self.bottom_bar.pack(fill="x", side=BOTTOM)
 
+    def __save(self) -> None:
+        """
+        Save the state of the machine.
+        :return:
+        """
+        save_file_name: str = filedialog.asksaveasfilename(title="Save as...", filetypes=[("Program File", ".prg"),
+                                                                                     ("SpaceCat Machine State", ".svm")])
+        print(save_file_name)
+        if save_file_name.endswith(".prg"):
+            with open(save_file_name, "wb") as file:
+                file.write(self.__machine.dump_program_memory())
     def __edit(self) -> None:
         """
         Open a NeutronKitty editor to edit the file.
@@ -237,7 +248,7 @@ class SpaceCatSimulator:
 
     def __load_special_registers(self):
         """
-        Load the special registers.
+        Load the special registers
         :return:
         """
         self.pc.delete(0, END)

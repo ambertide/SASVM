@@ -179,6 +179,19 @@ class Simulator:
             empty_mem[i].value = byte
         self.load_memory(empty_mem)
 
+    def dump_program_memory(self) -> bytes:
+        """
+        Dump the program memory as in a *.pkg format.
+        :return: the dumped memory as bytes.
+        """
+        byte_ready: List[int] = []
+        for cell in self.__memory:
+            byte_ready.append(cell.value)
+            for i in range(3):
+                byte_ready.append(0)
+        bytes_obj = bytes(byte_ready)
+        return bytes_obj
+
     def return_memory(self) -> List[Cell]:
         """
         Return memory.
