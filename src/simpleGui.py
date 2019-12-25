@@ -1,7 +1,5 @@
 from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel
-from typing import List, Dict, TypeVar
-
-from NeutronKitty import NeutronKitty
+from typing import List, Dict, TypeVar, Optional
 from spacecat.simulator import Simulator
 from spacecat.common_utils import Cell
 from spacecat.assembler import Assembler
@@ -44,6 +42,8 @@ class SpaceCatSimulator:
         self.REGISTER_SIZE = 16
         self.ROW_SIZE = 16
 
+        self.file_path: Optional[str] = None
+
         self.__machine: Simulator = Simulator(self.MEMORY_SIZE, self.REGISTER_SIZE)
         self.__memory_values: List[Cell] = self.__machine.return_memory()  # Memory from previous turn.
         self.__register_values: List[Cell] = self.__machine.return_registers()  # Registers from previous turn.
@@ -67,11 +67,13 @@ class SpaceCatSimulator:
         self.__step_button = Button(master=self.buttons_frame, text="Step", relief=FLAT, command=self.__step)
         self.__editor = Button(master=self.buttons_frame, text="Editor", relief=FLAT)
         self.__disassemble = Button(master=self.buttons_frame, text="Disassemble", relief=FLAT, command=self.__dis)
+        self.__edit_button = Button(master=self.buttons_frame, text="Edit", relief=FLAT, command=self.__edit)
 
         self.__run.grid(row=0, column=0)
         self.__step_button.grid(row=0, column=1)
         self.__editor.grid(row=0, column=2)
         self.__disassemble.grid(row=0, column=3)
+        self.__edit_button.grid(row=0, column=4)
 
         self.menubar = Menu(self.master, relief=RAISED)
         self.file_menu = Menu(self.menubar)
@@ -90,16 +92,35 @@ class SpaceCatSimulator:
         self.register_canvas.pack()
         self.bottom_bar.pack(fill="x", side=BOTTOM)
 
+    def __edit(self) -> None:
+        """
+        Open a NeutronKitty editor to edit the file.
+        :return:
+        """
+        if self.file_path:
+            from NeutronKitty import NeutronKitty
+            neutron_kitty = NeutronKitty(Tk(), file_path=self.file_path, svm=self)
+
+
     def __dis(self) -> None:
+        """
+        Disassemble the file and open a NeutronKitty to edit and see the results.
+        :return:
+        """
         values = []
         for i in range(0, len(self.__memory_values), 2):
             values.append(str(self.__memory_values[i]) + str(self.__memory_values[i + 1]))
         dis_ = disassemble(values)
         commands = filter(lambda x: x != "", dis_)
         string = '\n'.join(commands)
+        from NeutronKitty import NeutronKitty
         neutron_kitty = NeutronKitty(Tk(), string)
 
     def __run_machine(self):
+        """
+        Run the machine.
+        :return:
+        """
         self.__step()
         try:
             self.master.after(500, self.__run_machine)
@@ -107,21 +128,27 @@ class SpaceCatSimulator:
             pass
 
     def __step(self):
+        """
+        Take a step in the program.
+        :return:
+        """
         try:
             memory_cells, register_cells = self.__machine.__next__()
             self.__update_view(memory_cells, register_cells)
         except StopIteration:
             pass
 
-    def open_file(self):
+    def open_file(self, file_name=None):
         """
         Open a file to load to the memory.
         :return:
         """
-        file_name: str = filedialog.askopenfilename(title="Select file", filetypes=(("Assembly source code", "*.asm"),
-                                                                                   ("SimpSim Memory State", "*.prg"),
-                                                                                   ("SpaceCat Machine State", "*.svm")))
+        if not file_name:
+            file_name: str = filedialog.askopenfilename(title="Select file", filetypes=(("Assembly source code", "*.asm"),
+                                                                                       ("SimpSim Memory State", "*.prg"),
+                                                                                       ("SpaceCat Machine State", "*.svm")))
         if file_name.endswith(".asm"):
+            self.file_path = file_name
             assembler: Assembler = Assembler.instantiate(open(file_name, "r").read(), 256)
             self.__machine.load_memory(assembler.memory)
         elif file_name.endswith(".prg"):
@@ -209,6 +236,10 @@ class SpaceCatSimulator:
         self.prev_run_cell = self.__machine.PC
 
     def __load_special_registers(self):
+        """
+        Load the special registers.
+        :return:
+        """
         self.pc.delete(0, END)
         self.pc.insert(0, f"{self.__machine.PC:02X}")
         self.ir.delete(0, END)
