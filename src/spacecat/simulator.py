@@ -13,6 +13,7 @@ class Simulator:
         """
         self.__memory = [Cell() for _ in range(mem_size)]
         self.mem_size = mem_size
+        self.register_size = register_size
         self.__registers = [Cell() for _ in range(register_size)]
         self.IR: str = "0000"  # Current instruction under execution.
         self.PC: int = 0  # Next value index.
@@ -167,6 +168,14 @@ class Simulator:
         """
         self.__memory = memory
 
+    def load_registers(self, registers: List[Cell]):
+        """
+        Load the registers from a given list of Cell
+        :param registers:
+        :return:
+        """
+        self.__registers = registers
+
     def parse_program_memory(self, bytes_list: bytes):
         """
         Parse the memory of a *.prg file.
@@ -179,18 +188,53 @@ class Simulator:
             empty_mem[i].value = byte
         self.load_memory(empty_mem)
 
-    def dump_program_memory(self) -> bytes:
+    def parse_program_state(self, bytes_list: bytes):
+        """
+        Parse the program state of a SVM
+        :param bytes_list: Bytes holding the program state in the file as a *.svm format.
+        :return: None.
+        """
+        empty_mem = [Cell() for _ in range(self.mem_size)]
+        empty_regs = [Cell() for _ in range(self.register_size)]
+        self.reset_special_registers()
+        self.IR = ""
+        for i, byte in enumerate(bytes_list):
+            if i < self.mem_size:
+                empty_mem[i].value = byte
+            elif i < self.mem_size + self.register_size:
+                empty_regs[i].value = byte
+            elif i < self.mem_size + self.register_size + 1:
+                self.PC = byte
+            else:
+                self.IR += format(byte, "02X")
+        self.load_memory(empty_mem)
+        self.load_registers(empty_regs)
+
+    def dump_program_memory(self, array_: List[Cell] = None) -> bytes:
         """
         Dump the program memory as in a *.pkg format.
         :return: the dumped memory as bytes.
         """
+        if not array_:
+            array_ = self.__memory
         byte_ready: List[int] = []
-        for cell in self.__memory:
+        for cell in array_:
             byte_ready.append(cell.value)
             for i in range(3):
                 byte_ready.append(0)
         bytes_obj = bytes(byte_ready)
         return bytes_obj
+
+    def dump_program_svm_state(self) -> bytes:
+        """
+        Dump the program state including registers and special registers.
+        :return: the dumped program state.
+        """
+        byte_array = self.dump_program_memory()  + self.dump_program_memory(self.__registers)
+        byte_obj = bytes(byte_array[i] for i in range(0, len(byte_array), 4))
+        byte_obj += bytes([self.PC])
+        byte_obj += bytes([int(self.IR[:2], base=16), int(self.IR[2:], base=16)])
+        return byte_obj
 
     def return_memory(self) -> List[Cell]:
         """

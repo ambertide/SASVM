@@ -55,7 +55,7 @@ class OctalFloat:
         Convert the number into float.
         :return:
         """
-        return self.__sign * (self.__mantissa**self.__exponent)
+        return self.__sign * (self.__mantissa * 2**self.__exponent)
 
     def __add__(self, other: "OctalFloat") -> "OctalFloat":
         """
