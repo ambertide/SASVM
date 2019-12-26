@@ -1,7 +1,7 @@
 from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel
 from typing import List, Dict, TypeVar, Optional
 from spacecat.simulator import Simulator
-from spacecat.common_utils import Cell
+from spacecat.common_utils import Cell, OctalFloat
 from spacecat.assembler import Assembler
 from copy import deepcopy
 from enum import Enum
@@ -176,7 +176,7 @@ class SpaceCatSimulator:
         """
         value = event.widget.get()
         real_val = int(value, base=16)
-        self.bottom_bar["text"] = f"Decimal Value: {real_val}\tHexadecimal Value:{real_val:02X}\tBinary Value: {real_val:08b}"
+        self.bottom_bar["text"] = f"Decimal Value: {real_val}\tHexadecimal Value:{real_val:02X}\tFloat Value:{OctalFloat(format(real_val, '02X')).__float__()}\tBinary Value: {real_val:08b}"
 
     def __populate_canvases(self):
         """
