@@ -1,4 +1,5 @@
 from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel
+from tkinter.messagebox import showwarning
 from typing import List, Dict, TypeVar, Optional
 from spacecat.simulator import Simulator
 from spacecat.common_utils import Cell, OctalFloat
@@ -23,7 +24,10 @@ def get_difference(previous_list: List[T], current_list: List[T]) -> Dict[int, T
     return diff_dict
 
 
-class TICKS(Enum):
+class TICK(Enum):
+    """
+    Tick is the running speed of the machine.
+    """
     HIGH: int = 500
     MEDIUM: int = 300
     LOW: int = 100
@@ -43,6 +47,7 @@ class SpaceCatSimulator:
         self.ROW_SIZE = 16
 
         self.file_path: Optional[str] = None
+        self.current_tick: TICK = TICK.LOW.value
 
         self.__machine: Simulator = Simulator(self.MEMORY_SIZE, self.REGISTER_SIZE)
         self.__memory_values: List[Cell] = self.__machine.return_memory()  # Memory from previous turn.
@@ -97,12 +102,22 @@ class SpaceCatSimulator:
         Save the state of the machine.
         :return:
         """
-        save_file_name: str = filedialog.asksaveasfilename(title="Save as...", filetypes=[("Program File", ".prg"),
-                                                                                     ("SpaceCat Machine State", ".svm")])
-        print(save_file_name)
+        save_file_name: str = filedialog.asksaveasfilename(title="Save as...",
+                                                           filetypes=[("Program File", ".prg"),
+                                                                      ("SpaceCat Machine State", ".svm")])
+        if save_file_name == "":
+            return None
         if save_file_name.endswith(".prg"):
             with open(save_file_name, "wb") as file:
                 file.write(self.__machine.dump_program_memory())
+        elif save_file_name.endswith(".svm"):
+            with open(save_file_name, "wb") as file:
+                file.write(self.__machine.dump_program_svm_state())
+        else:
+            with open(save_file_name + ".prg", "wb") as file:
+                file.write(self.__machine.dump_program_memory())
+            showwarning("Saved as PRG", "Since no extension was provided, the memory was saved as *.prg file.")
+
     def __edit(self) -> None:
         """
         Open a NeutronKitty editor to edit the file.
@@ -111,7 +126,6 @@ class SpaceCatSimulator:
         if self.file_path:
             from NeutronKitty import NeutronKitty
             neutron_kitty = NeutronKitty(Tk(), file_path=self.file_path, svm=self)
-
 
     def __dis(self) -> None:
         """
@@ -155,9 +169,10 @@ class SpaceCatSimulator:
         :return:
         """
         if not file_name:
-            file_name: str = filedialog.askopenfilename(title="Select file", filetypes=(("Assembly source code", "*.asm"),
-                                                                                       ("SimpSim Memory State", "*.prg"),
-                                                                                       ("SpaceCat Machine State", "*.svm")))
+            file_name: str = filedialog.askopenfilename(title="Select file",
+                                                        filetypes=(("Assembly source code", "*.asm"),
+                                                                   ("SimpSim Memory State", "*.prg"),
+                                                                   ("SpaceCat Machine State", "*.svm")))
         if file_name.endswith(".asm"):
             self.file_path = file_name
             assembler: Assembler = Assembler.instantiate(open(file_name, "r").read(), 256)
@@ -166,6 +181,9 @@ class SpaceCatSimulator:
             self.__machine.parse_program_memory(open(file_name, "rb").read())
             self.__reset_ir_pc()
             self.__machine.reset_special_registers()
+        elif file_name.endswith(".svm"):
+            self.__machine.parse_program_state(open(file_name, "rb").read())
+            self.__load_special_registers()
         self.__update_view(self.__machine.return_memory(), self.__machine.return_registers())
 
     def on_click(self, event: Event):
@@ -176,7 +194,10 @@ class SpaceCatSimulator:
         """
         value = event.widget.get()
         real_val = int(value, base=16)
-        self.bottom_bar["text"] = f"Decimal Value: {real_val}\tHexadecimal Value:{real_val:02X}\tFloat Value:{OctalFloat(format(real_val, '02X')).__float__()}\tBinary Value: {real_val:08b}"
+        self.bottom_bar["text"] = f"Decimal: {real_val:03}" \
+                                  f"\tHexadecimal: {real_val:02X}" \
+                                  f"\tFloat: {OctalFloat(format(real_val, '02X')).__float__():.3f}" \
+                                  f"\tBinary: {real_val:08b}"
 
     def __populate_canvases(self):
         """

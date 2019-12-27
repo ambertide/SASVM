@@ -7,4 +7,4 @@ class TestOctalFloat(TestCase):
         self.octal = OctalFloat("AA")
 
     def test_octal_creation(self):
-        self.assertEqual(-0.15625, float(self.octal))
+        self.assertEqual(-0.156, float(self.octal))
