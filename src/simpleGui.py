@@ -47,7 +47,7 @@ class SpaceCatSimulator:
         self.ROW_SIZE = 16
 
         self.file_path: Optional[str] = None
-        self.current_tick: TICK = TICK.LOW.value
+        self.current_tick: TICK = TICK.LOW
 
         self.__machine: Simulator = Simulator(self.MEMORY_SIZE, self.REGISTER_SIZE)
         self.__memory_values: List[Cell] = self.__machine.return_memory()  # Memory from previous turn.
@@ -82,11 +82,18 @@ class SpaceCatSimulator:
 
         self.menubar = Menu(self.master, relief=RAISED)
         self.file_menu = Menu(self.menubar)
+        self.emulator_menu = Menu(self.menubar)
+        self.speed = Menu(self.menubar)
+        self.speed.add_command(label="Fast", command=lambda : self.__change_tick(TICK.LOW))
+        self.speed.add_command(label="Medium", command=lambda : self.__change_tick(TICK.MEDIUM))
+        self.speed.add_command(label="Slow", command=lambda : self.__change_tick(TICK.HIGH))
         self.file_menu.add_command(label="Open", command=self.open_file)
         self.file_menu.add_command(label="Save Machine State", command=self.__save)
         self.file_menu.add_separator()
         self.file_menu.add_command(label="Exit", command=lambda: quit())
         self.menubar.add_cascade(label="File", menu=self.file_menu)
+        self.emulator_menu.add_cascade(label="Speed", menu=self.speed)
+        self.menubar.add_cascade(label="Simulator", menu=self.emulator_menu)
         self.master.config(menu=self.menubar)
 
         self.bottom_bar = Label(self.master, text="Decimal Value: \tHexadecimal Value: "
@@ -96,6 +103,14 @@ class SpaceCatSimulator:
         self.memory_canvas.pack()
         self.register_canvas.pack()
         self.bottom_bar.pack(fill="x", side=BOTTOM)
+
+    def __change_tick(self, tick_speed: TICK) -> None:
+        """
+        Set the machine speed
+        :param tick_speed: Speed of the machine in ticks.
+        :return: None.
+        """
+        self.current_tick = tick_speed
 
     def __save(self) -> None:
         """
@@ -148,7 +163,7 @@ class SpaceCatSimulator:
         """
         self.__step()
         try:
-            self.master.after(500, self.__run_machine)
+            self.master.after(self.current_tick.value, self.__run_machine)
         except StopIteration:
             pass
 
