@@ -1,4 +1,5 @@
-from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel
+from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel, \
+    StringVar, OptionMenu, W, E, S, N
 from tkinter.messagebox import showwarning
 from typing import List, Dict, TypeVar, Optional
 from spacecat.simulator import Simulator
@@ -7,7 +8,7 @@ from spacecat.assembler import Assembler
 from copy import deepcopy
 from enum import Enum
 from spacecat.disassembler import disassemble
-
+from svm_config import Language, Config
 
 T = TypeVar("T")
 
@@ -36,11 +37,14 @@ class TICK(Enum):
 class SpaceCatSimulator:
     def __init__(self, master: Tk):
 
+        self.conf = Config()
+        self.lang = Language(self.conf.get("lang"))
+
         self.master = master
         self.master.resizable(height=False, width=False)
-        self.master.geometry("500x500")
+        self.master.geometry("510x510")
         self.master.iconbitmap("data\spacecat.ico")
-        self.master.title("SpaceCat Simple Assembly Simulator")
+        self.master.title(self.lang.title)
 
         self.MEMORY_SIZE = 256
         self.REGISTER_SIZE = 16
@@ -68,11 +72,11 @@ class SpaceCatSimulator:
             register.bind("<Button-1>", self.on_click)
         self.__populate_canvases()
 
-        self.__run = Button(master=self.buttons_frame, text="Run", relief=FLAT, command=self.__run_machine)
-        self.__step_button = Button(master=self.buttons_frame, text="Step", relief=FLAT, command=self.__step)
-        self.__editor = Button(master=self.buttons_frame, text="Editor", relief=FLAT)
-        self.__disassemble = Button(master=self.buttons_frame, text="Disassemble", relief=FLAT, command=self.__dis)
-        self.__edit_button = Button(master=self.buttons_frame, text="Edit", relief=FLAT, command=self.__edit)
+        self.__run = Button(master=self.buttons_frame, text=self.lang.run, relief=FLAT, command=self.__run_machine)
+        self.__step_button = Button(master=self.buttons_frame, text=self.lang.step, relief=FLAT, command=self.__step)
+        self.__editor = Button(master=self.buttons_frame, text=self.lang.editor, relief=FLAT)
+        self.__disassemble = Button(master=self.buttons_frame, text=self.lang.disassemble, relief=FLAT, command=self.__dis)
+        self.__edit_button = Button(master=self.buttons_frame, text=self.lang.edit, relief=FLAT, command=self.__edit)
 
         self.__run.grid(row=0, column=0)
         self.__step_button.grid(row=0, column=1)
@@ -84,20 +88,21 @@ class SpaceCatSimulator:
         self.file_menu = Menu(self.menubar)
         self.emulator_menu = Menu(self.menubar)
         self.speed = Menu(self.menubar)
-        self.speed.add_command(label="Fast", command=lambda : self.__change_tick(TICK.LOW))
-        self.speed.add_command(label="Medium", command=lambda : self.__change_tick(TICK.MEDIUM))
-        self.speed.add_command(label="Slow", command=lambda : self.__change_tick(TICK.HIGH))
-        self.file_menu.add_command(label="Open", command=self.open_file)
-        self.file_menu.add_command(label="Save Machine State", command=self.__save)
+        self.speed.add_command(label=self.lang.fast, command=lambda : self.__change_tick(TICK.LOW))
+        self.speed.add_command(label=self.lang.medium, command=lambda : self.__change_tick(TICK.MEDIUM))
+        self.speed.add_command(label=self.lang.slow, command=lambda : self.__change_tick(TICK.HIGH))
+        self.file_menu.add_command(label=self.lang.open, command=self.open_file)
+        self.file_menu.add_command(label=self.lang.save_state, command=self.__save)
+        self.file_menu.add_command(label=self.lang.language_change, command=self.__language_selection)
         self.file_menu.add_separator()
-        self.file_menu.add_command(label="Exit", command=lambda: quit())
-        self.menubar.add_cascade(label="File", menu=self.file_menu)
-        self.emulator_menu.add_cascade(label="Speed", menu=self.speed)
-        self.menubar.add_cascade(label="Simulator", menu=self.emulator_menu)
+        self.file_menu.add_command(label=self.lang.exit, command=lambda: quit())
+        self.menubar.add_cascade(label=self.lang.file, menu=self.file_menu)
+        self.emulator_menu.add_cascade(label=self.lang.speed, menu=self.speed)
+        self.menubar.add_cascade(label=self.lang.simulator, menu=self.emulator_menu)
         self.master.config(menu=self.menubar)
 
-        self.bottom_bar = Label(self.master, text="Decimal Value: \tHexadecimal Value: "
-                                                  "\tFloat Value: \tBinary Value: ", relief=RAISED)
+        self.bottom_bar = Label(self.master, text=f"{self.lang.decimal}: \t{self.lang.hex}: "
+                                                  f"\t{self.lang.float}: \t{self.lang.bin}: ", relief=RAISED)
 
         self.buttons_frame.pack(fill="x", side=TOP)
         self.memory_canvas.pack()
@@ -117,9 +122,9 @@ class SpaceCatSimulator:
         Save the state of the machine.
         :return:
         """
-        save_file_name: str = filedialog.asksaveasfilename(title="Save as...",
-                                                           filetypes=[("Program File", ".prg"),
-                                                                      ("SpaceCat Machine State", ".svm")])
+        save_file_name: str = filedialog.asksaveasfilename(title=self.lang.save_as,
+                                                           filetypes=[(self.lang._prog, ".prg"),
+                                                                      (self.lang.svm, ".svm")])
         if save_file_name == "":
             return None
         if save_file_name.endswith(".prg"):
@@ -131,7 +136,7 @@ class SpaceCatSimulator:
         else:
             with open(save_file_name + ".prg", "wb") as file:
                 file.write(self.__machine.dump_program_memory())
-            showwarning("Saved as PRG", "Since no extension was provided, the memory was saved as *.prg file.")
+            showwarning(self.lang.warn_title, self.lang.warn_message)
 
     def __edit(self) -> None:
         """
@@ -184,10 +189,10 @@ class SpaceCatSimulator:
         :return:
         """
         if not file_name:
-            file_name: str = filedialog.askopenfilename(title="Select file",
-                                                        filetypes=(("Assembly source code", "*.asm"),
-                                                                   ("SimpSim Memory State", "*.prg"),
-                                                                   ("SpaceCat Machine State", "*.svm")))
+            file_name: str = filedialog.askopenfilename(title=self.lang.select,
+                                                        filetypes=((self.lang.asm, "*.asm"),
+                                                                   (self.lang.prog, "*.prg"),
+                                                                   (self.lang.svm, "*.svm")))
         if file_name.endswith(".asm"):
             self.file_path = file_name
             assembler: Assembler = Assembler.instantiate(open(file_name, "r").read(), 256)
@@ -209,10 +214,10 @@ class SpaceCatSimulator:
         """
         value = event.widget.get()
         real_val = int(value, base=16)
-        self.bottom_bar["text"] = f"Decimal: {real_val:03}" \
-                                  f"\tHexadecimal: {real_val:02X}" \
-                                  f"\tFloat: {OctalFloat(format(real_val, '02X')).__float__():.3f}" \
-                                  f"\tBinary: {real_val:08b}"
+        self.bottom_bar["text"] = f"{self.lang.decimal}: {real_val:03}" \
+                                  f"\t{self.lang.hex}: {real_val:02X}" \
+                                  f"\t{self.lang.float}: {OctalFloat(format(real_val, '02X')).__float__():.3f}" \
+                                  f"\t{self.lang.bin}: {real_val:08b}"
 
     def __populate_canvases(self):
         """
@@ -292,8 +297,23 @@ class SpaceCatSimulator:
         self.ir.delete(0, END)
         self.ir.insert(0, str(self.__machine.IR))
 
+    def __language_selection(self) -> None:
+        lang = {"en": "English", "tr": "Türkçe"}
+        lang_rev = {"English": "en", "Türkçe": "tr"}
+        langs = ["English", "Türkçe"]
+        language_selector = Toplevel(self.master)
+        Label(master=language_selector, text=self.lang.language_change).grid(row=0, column=0)
+        language_selection = StringVar(language_selector)
+        language_selection.set(lang[self.conf.get("lang")])
+        language_sel = OptionMenu(language_selector, language_selection, *langs)
+        language_sel.grid(row=1, column=0)
+        def __set_language():
+            self.conf.set("lang", lang_rev[language_selection.get()])
+            showwarning(title=self.lang.restart_title, message=self.lang.restart_message)
+        approve_button = Button(master=language_selector, text=self.lang.save, command=__set_language)
+        approve_button.grid(row=0, column=1, rowspan=2, sticky=W+E+S+N)
 
 if __name__ == "__main__":
     root = Tk()
     SVM = SpaceCatSimulator(root)
-    root.mainloop();
+    root.mainloop()
