@@ -1,0 +1,29 @@
+import unittest
+
+from spacecat import assembler, simulator
+from spacecat.common_utils import Cell
+
+
+class AlphabetBenchmark(unittest.TestCase):
+    def test_assembler(self):
+        with open(TEST_FILE) as file:
+            a_ = assembler.Assembler.instantiate(file.read())
+            self.assertEqual(TEST_MEMORY, a_.memory)
+
+    def test_simulator(self):
+        with open(TEST_FILE) as file:
+            a_ = assembler.Assembler.instantiate(file.read())
+        s_ = simulator.Simulator(mem_size=126, register_size=16, stdout_register_indices=[15])
+        s_.load_memory(a_.memory)
+        output = ""
+        i = 0
+        for _ in s_:
+            output += s_.return_stdout()
+            i += 1
+            if i == 10_000:
+                self.fail("Failed to resolve in given CPU Cycles.")
+        self.assertEqual(EXPECTED_OUTPUT, output)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -104,11 +104,14 @@ class Cell:
     """
     A memory cell.
     """
-    def __init__(self):
+    def __init__(self, hex: str = ""):
         """
         Initialise a memory cell.
         """
-        self.__value: int = 0
+        if hex:
+            self.__value: int = int(hex, base=16)
+        else:
+            self.__value: int = 0
 
     @property
     def binary_value(self):
