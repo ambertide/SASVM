@@ -3,19 +3,26 @@ import unittest
 from spacecat import assembler, simulator
 from spacecat.common_utils import Cell
 
-test_code = """load R0, 5Ah; Load the end of the capital English ASCII block.
-load R1, 1; Load the increment register.
-load R2, 40h; Load the start of the capital English ASCII block.
-loop:
-    move RF, R2; Move the value at R2 to the STDOUT register.
-    addi R2, R2, R1; Increment
-    jmpLE R2<=R0, loop
-    halt"""
+test_code = """load R5, 01010001b
+load R4, 1
+substract:
+	load	R6, 11111111b
+	xor	R7, R5, R6
+	and	R8, R7, R4
+	xor	R5, R5, R4
+	move	R4, R8
+	addi	R4, R4, R4
+	jmpEQ R4 = R0, end
+	jmp substract
+end:
+	move RF, R5
+	halt
+"""
 
 class AlphabetBenchmark(unittest.TestCase):
     def test_assembler(self):
-        a_ = assembler.Assembler.instantiate(test_code, mem_size=14)
-        self.assertEqual([Cell("20"),Cell("5A"),Cell("21"),Cell("01"),Cell("22"),Cell("40"),Cell("40"),Cell("2F"),Cell("52"),Cell("21"),Cell("F2"),Cell("06"),Cell("C0"),Cell("00"),], a_.memory)
+        a_ = assembler.Assembler.instantiate(test_code, mem_size=24)
+        self.assertEqual([Cell("25"),Cell("51"),Cell("24"),Cell("01"),Cell("26"),Cell("FF"),Cell("97"),Cell("56"),Cell("88"),Cell("74"),Cell("95"),Cell("54"),Cell("40"),Cell("84"),Cell("54"),Cell("44"),Cell("B4"),Cell("14"),Cell("B0"),Cell("04"),Cell("40"),Cell("5F"),Cell("C0"),Cell("00"),], a_.memory)
 
     def test_simulator(self):
         a_ = assembler.Assembler.instantiate(test_code, mem_size=128)
@@ -28,7 +35,7 @@ class AlphabetBenchmark(unittest.TestCase):
             i += 1
             if i == 10_000:
                 self.fail("Failed to resolve in given CPU Cycles.")
-        self.assertEqual('ABCDEFGHIJKLMNOPRSTUVYXWQ', output)
+        self.assertEqual('P', output)
 
 if __name__ == '__main__':
     unittest.main()

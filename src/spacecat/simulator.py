@@ -167,7 +167,11 @@ class Simulator:
         :param memory: Memory to load.
         :return:
         """
+        if len(memory) < self.mem_size:
+            padding = self.mem_size - len(memory)
+            memory.extend(Cell() for _ in range(padding))
         self.__memory = memory
+
 
     def load_registers(self, registers: List[Cell]):
         """

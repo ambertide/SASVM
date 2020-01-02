@@ -75,7 +75,7 @@ class Assembler:
         """
         Return the memory address from an org statement
         :param string: ex: org 16
-        :return: Memory address in hex, if there is no adress, return ""
+        :return: Memory address in hex, if there is no address, return ""
         """
         if match := Assembler.org_pattern.findall(string):
             number_hex: str = convert_numeral(match[0])

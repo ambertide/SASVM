@@ -23,22 +23,24 @@ def generate_test_case(file_name: str, expected_memory: str, expected_output: st
     :param expected_output: Expected output from STDOUT
     :return: String
     """
+    with open(file_name) as file:
+        code = file.read()
     expected_memory_list: str = generate_memory_list_view(expected_memory)
     output: str = f"""# Generated with SpaceCat TestCase Generator.
 import unittest
 from spacecat import assembler, simulator
 from spacecat.common_utils import Cell
 
+test_code = \"\"\"{code}\"\"\"
+
 class AlphabetBenchmark(unittest.TestCase):
     def test_assembler(self):
-        with open('{file_name}') as file:
-            a_ = assembler.Assembler.instantiate(file.read())
-            self.assertEqual({expected_memory_list}, a_.memory)
+        a_ = assembler.Assembler.instantiate(test_code, mem_size={len(expected_memory)//2})
+        self.assertEqual({expected_memory_list}, a_.memory)
 
     def test_simulator(self):
-        with open('{file_name}') as file:
-            a_ = assembler.Assembler.instantiate(file.read())
-        s_ = simulator.Simulator(mem_size=126, register_size=16, stdout_register_indices=[15])
+        a_ = assembler.Assembler.instantiate(test_code, mem_size=128)
+        s_ = simulator.Simulator(mem_size=128, register_size=16, stdout_register_indices=[15])
         s_.load_memory(a_.memory)
         output = ""
         i = 0
