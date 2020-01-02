@@ -145,6 +145,12 @@ class Cell:
         else:
             return False
 
+    def __le__(self, other):
+        if isinstance(other, Cell):
+            return other.value <= self.value
+        else:
+            return False
+
 def mem_print(mem: List[Cell]):
     for i in range(16, 256, 16):
         for j in range(i - 16, i):

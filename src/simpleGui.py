@@ -1,10 +1,11 @@
 from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel, \
-    StringVar, OptionMenu, W, E, S, N
+    StringVar, OptionMenu, W, E, S, N, Message
 from tkinter.messagebox import showwarning
-from typing import List, Dict, TypeVar, Optional
+from typing import List, Dict, TypeVar, Optional, Callable
 from spacecat.simulator import Simulator
 from spacecat.common_utils import Cell, OctalFloat
 from spacecat.assembler import Assembler
+from string import hexdigits
 from copy import deepcopy
 from enum import Enum
 from spacecat.disassembler import disassemble
@@ -34,6 +35,32 @@ class TICK(Enum):
     LOW: int = 100
 
 
+class CellEntry(Entry):
+    def __init__(self, index_of: int, register_type: str, list_of: List[Cell], monitor_callback: Callable, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.register_type = register_type
+        self.index_of = index_of
+        self.__variable = StringVar()
+        self.__variable.trace_add("write", self.__validate)
+        self.config(textvariable=self.__variable)
+        self.list_of = list_of
+
+    def __validate(self, *others):
+        value: Optional[str] = self.__variable.get()
+        if value is None or value == "":
+            value = "00"
+        value_two: str = value[:2]
+        if all(char in hexdigits for char in value_two):
+            hex: int = int(value_two, base=16)
+        else:
+            hex: int = 0
+        self.__variable.set(format(hex, "02X"))
+        self.__on_edit()
+
+    def __on_edit(self):
+        self.list_of[self.index_of].value = self.__variable.get()
+
+
 class SpaceCatSimulator:
     def __init__(self, master: Tk):
 
@@ -43,31 +70,40 @@ class SpaceCatSimulator:
         self.master = master
         self.master.resizable(height=False, width=False)
         self.master.geometry("510x510")
-        self.master.iconbitmap("data\spacecat.ico")
+        self.master.iconbitmap("resources/spacecat.ico")
         self.master.title(self.lang.title)
 
         self.MEMORY_SIZE = 256
         self.REGISTER_SIZE = 16
         self.ROW_SIZE = 16
+        self.STDOUT_REGISTER_INDICES = [15]
 
         self.file_path: Optional[str] = None
         self.current_tick: TICK = TICK.LOW
+        self.monitor_string = StringVar()
+        self.clicked_cells: List[CellEntry] = []
 
-        self.__machine: Simulator = Simulator(self.MEMORY_SIZE, self.REGISTER_SIZE)
+        self.__machine: Simulator = Simulator(self.MEMORY_SIZE, self.REGISTER_SIZE, self.STDOUT_REGISTER_INDICES)
         self.__memory_values: List[Cell] = self.__machine.return_memory()  # Memory from previous turn.
         self.__register_values: List[Cell] = self.__machine.return_registers()  # Registers from previous turn.
+        self.__define_gui()
 
-        self.memory_canvas = Frame(master)
-        self.register_canvas = Frame(master)
-        self.buttons_frame = Frame(master, bd= 1, relief=RAISED)
+    def __define_gui(self):
+        self.memory_canvas = Frame(self.master)
+        self.register_canvas = Frame(self.master)
+        self.monitor_canvas = Frame(self.master)
+        self.buttons_frame = Frame(self.master, bd= 1, relief=RAISED)
         self.prev_run_cell = 0
 
-        self.cells = [Entry(master=self.memory_canvas, width=3)
-                      for _ in range(self.MEMORY_SIZE)]
+        self.cells = [CellEntry(index_of=i, register_type="M", list_of= self.__machine.return_memory(),
+                                monitor_callback=self.__check_monitor, master=self.memory_canvas, width=3)
+                      for i in range(self.MEMORY_SIZE)]
         for cell in self.cells:
             cell.bind("<Button-1>", self.on_click)
 
-        self.registers = [Entry(master=self.register_canvas, width=3) for _ in range(self.REGISTER_SIZE)]
+        self.registers = [CellEntry(index_of=i, register_type="R", list_of=self.__machine.return_registers(),
+                                    monitor_callback=self.__check_monitor,
+                                    master=self.register_canvas, width=3) for i in range(self.REGISTER_SIZE)]
         for register in self.registers:
             register.bind("<Button-1>", self.on_click)
         self.__populate_canvases()
@@ -107,7 +143,15 @@ class SpaceCatSimulator:
         self.buttons_frame.pack(fill="x", side=TOP)
         self.memory_canvas.pack()
         self.register_canvas.pack()
+        self.monitor_canvas.pack()
         self.bottom_bar.pack(fill="x", side=BOTTOM)
+
+    def __on_edit(self, entry):
+        index = entry.index_of
+        if entry.register_type == "R":
+            self.__machine.return_registers()[index].value = int(entry.get(), base=16)
+        elif entry.register_type == "M":
+            self.__machine.return_memory()[index].value = int(entry.get(), base=16)
 
     def __change_tick(self, tick_speed: TICK) -> None:
         """
@@ -161,6 +205,18 @@ class SpaceCatSimulator:
         from NeutronKitty import NeutronKitty
         neutron_kitty = NeutronKitty(Tk(), string)
 
+    def __check_monitor(self):
+        self.monitor_string.set(self.monitor_string.get() + self.__machine.return_stdout())
+
+    def __sync_machine(self):
+        """
+        Sync the machine's registers with the entry fields in case modified
+        :return:
+        """
+        print(self.clicked_cells)
+        for clicked in self.clicked_cells:
+            index = clicked.index_of
+
     def __run_machine(self):
         """
         Run the machine.
@@ -179,7 +235,9 @@ class SpaceCatSimulator:
         """
         try:
             memory_cells, register_cells = self.__machine.__next__()
+#            self.__sync_machine()
             self.__update_view(memory_cells, register_cells)
+            self.__check_monitor()
         except StopIteration:
             pass
 
@@ -213,6 +271,7 @@ class SpaceCatSimulator:
         :return:
         """
         value = event.widget.get()
+        self.clicked_cells.append(event.widget)
         real_val = int(value, base=16)
         self.bottom_bar["text"] = f"{self.lang.decimal}: {real_val:03}" \
                                   f"\t{self.lang.hex}: {real_val:02X}" \
@@ -240,6 +299,9 @@ class SpaceCatSimulator:
         self.ir = Entry(master=self.register_canvas, width=6)
         self.ir.grid(row=2, column=9, columnspan=2)
         Button(master=self.register_canvas, text="∅", command=self.__reset_ir_pc).grid(row=2, column=11)
+        self.monitor = Message(self.monitor_canvas, textvariable=self.monitor_string)
+        self.monitor.config(bg="black", fg="green", font=("fixedsys", 15))
+        self.monitor.pack()
         self.__load_memory_to_view()
 
     def __reset_ir_pc(self) -> None:
@@ -298,6 +360,10 @@ class SpaceCatSimulator:
         self.ir.insert(0, str(self.__machine.IR))
 
     def __language_selection(self) -> None:
+        """
+        Open a window to select the language
+        :return:
+        """
         lang = {"en": "English", "tr": "Türkçe"}
         lang_rev = {"English": "en", "Türkçe": "tr"}
         langs = ["English", "Türkçe"]
@@ -312,6 +378,7 @@ class SpaceCatSimulator:
             showwarning(title=self.lang.restart_title, message=self.lang.restart_message)
         approve_button = Button(master=language_selector, text=self.lang.save, command=__set_language)
         approve_button.grid(row=0, column=1, rowspan=2, sticky=W+E+S+N)
+
 
 if __name__ == "__main__":
     root = Tk()

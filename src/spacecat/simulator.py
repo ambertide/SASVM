@@ -5,7 +5,7 @@ class Simulator:
     """
     Simulator for the simulator.
     """
-    def __init__(self, mem_size: int, register_size: int):
+    def __init__(self, mem_size: int, register_size: int, stdout_register_indices: List[int]):
         """
         Initialise the simulator
         :param mem_size: Size of the memory
@@ -18,6 +18,7 @@ class Simulator:
         self.IR: str = "0000"  # Current instruction under execution.
         self.PC: int = 0  # Next value index.
         self.__can_continue: bool = True
+        self.stdout_register_indices = stdout_register_indices
         self.__op_code_method: Dict[str, Callable] = {
             "1": lambda: self.__direct_load(),
             "2": lambda: self.__immediate_load(),
@@ -127,7 +128,7 @@ class Simulator:
         register_to_check_index = int(self.IR[1], base=16)
         jump_to = int(self.IR[2:], base=16)
         self.__jmp = True
-        if self.__registers[register_to_check_index] <= self.check_reference_register:
+        if self.__registers[register_to_check_index] <= self.check_reference_register():
             self.PC = jump_to
 
     def __unconditional_jump(self):
@@ -257,3 +258,10 @@ class Simulator:
         """
         self.PC = 0
         self.IR = "0000"
+
+    def return_stdout(self) -> str:
+        stdout = ""
+        for stdout_register_index in self.stdout_register_indices:
+            register_value = self.__registers[stdout_register_index].value
+            stdout += chr(register_value)
+        return stdout

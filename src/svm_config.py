@@ -5,6 +5,7 @@ class Language:
     def __init__(self, lang_code):
         file_name = f"resources/svm-{lang_code}.locale"
         self.strings: Dict[str, str] = {}
+
         def __add_line(line: str) -> None:
             key, value = line.split(":=")
             self.strings[key] = value.strip("\n")
