@@ -1,0 +1,16 @@
+jmp 20h; B020
+load R1, 80h; 11A0
+load R2, 0Fh; 220F
+load R3, F0h; 23F0
+and R4, R1, R2; 8412
+and R5, R1, R3; 8513
+ror R5, 4; A504
+load R6, FFh; 26FF
+xor R7, R5, R6; 9756
+and R8, R7, R4; 8874
+xor R5, R5, R4; 9554
+move R8, R4; 4084
+addi R4, R4, R4; 5444
+jmpEQ R4=R0, 3Ch; B43C
+jmp 2Dh; B02D
+halt ; C000

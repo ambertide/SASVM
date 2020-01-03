@@ -150,7 +150,7 @@ class Cell:
 
     def __le__(self, other):
         if isinstance(other, Cell):
-            return other.value <= self.value
+            return self.value <= other.value
         else:
             return False
 

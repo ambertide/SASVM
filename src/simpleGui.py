@@ -60,6 +60,9 @@ class CellEntry(Entry):
     def __on_edit(self):
         self.list_of[self.index_of].value = self.__variable.get()
 
+    def set(self, value):
+        self.__variable.set(value)
+
 
 class SpaceCatSimulator:
     def __init__(self, master: Tk):
@@ -339,11 +342,9 @@ class SpaceCatSimulator:
         self.__memory_values = deepcopy(new_memory)
         self.__register_values = deepcopy(new_registers)
         for change_index, new_value in memory_differences.items():
-            self.cells[change_index].delete(0, END)
-            self.cells[change_index].insert(0, str(new_value))
+            self.cells[change_index].set(str(new_value))
         for change_index, new_value in register_differences.items():
-            self.registers[change_index].delete(0, END)
-            self.registers[change_index].insert(0, str(new_value))
+            self.registers[change_index].set(str(new_value))
         self.__load_special_registers()
         self.cells[self.__machine.PC]["background"] = "Green"
         self.cells[self.prev_run_cell]["background"] = "White"

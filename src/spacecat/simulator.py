@@ -39,20 +39,31 @@ class Simulator:
         }
         self.check_reference_register = lambda: self.__registers[0].value
         self.__jmp = False
+        self.rf_sleeping = True
 
+    def __awaken_rf_if(self, register_index: str):
+        """
+        Set RF to STDOUT
+        :return: None
+        """
+        if register_index == "F" or register_index == "f" or register_index == 15:
+            self.rf_sleeping = False
     def __immediate_load(self):
         register_index = self.IR[1]
+        self.__awaken_rf_if(register_index)
         value = self.IR[2:]
         self.__registers[int(register_index, base=16)].value = value
 
     def __direct_load(self):
         register_index = self.IR[1]
         memory_index = self.IR[2:]
+        self.__awaken_rf_if(register_index)
         self.__registers[int(register_index, base=16)].value = self.__memory[int(memory_index, base=16)].value
 
     def __indirect_load(self):
         register_index = self.IR[2]
         memory_index_register_index = self.IR[3]
+        self.__awaken_rf_if(register_index)
         memory_index = self.__registers[int(memory_index_register_index, base=16)].value
         self.__registers[int(register_index, base=16)].value = self.__memory[memory_index].value
 
@@ -70,12 +81,14 @@ class Simulator:
     def __move(self):
         register_sender_index: int = int(self.IR[2], base=16)
         register_receiver_index: int = int(self.IR[3], base=16)
+        self.__awaken_rf_if(register_receiver_index)
         self.__registers[register_receiver_index].value = self.__registers[register_sender_index].value
 
     def __integer_addition(self):
         register_receiver_index: int = int(self.IR[1], base=16)
         register_operand_one: int = int(self.IR[2], base=16)
         register_operand_two: int = int(self.IR[3], base=16)
+        self.__awaken_rf_if(register_receiver_index)
         self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value + \
                                                           self.__registers[register_operand_two].value
 
@@ -86,6 +99,7 @@ class Simulator:
         register_receiver_index: int = int(self.IR[1], base=16)
         register_operand_one: int = int(self.IR[2], base=16)
         register_operand_two: int = int(self.IR[3], base=16)
+        self.__awaken_rf_if(register_receiver_index)
         num_one = OctalFloat(str(self.__registers[register_operand_one]))
         num_two = OctalFloat(str(self.__registers[register_operand_two]))
         result = num_one + num_two
@@ -93,6 +107,7 @@ class Simulator:
 
     def __bitwise_or(self):
         register_receiver_index: int = int(self.IR[1], base=16)
+        self.__awaken_rf_if(register_receiver_index)
         register_operand_one: int = int(self.IR[2], base=16)
         register_operand_two: int = int(self.IR[3], base=16)
         self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value | \
@@ -100,6 +115,7 @@ class Simulator:
 
     def __bitwise_and(self):
         register_receiver_index: int = int(self.IR[1], base=16)
+        self.__awaken_rf_if(register_receiver_index)
         register_operand_one: int = int(self.IR[2], base=16)
         register_operand_two: int = int(self.IR[3], base=16)
         self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value & \
@@ -107,6 +123,7 @@ class Simulator:
 
     def __bitwise_exclusive_or(self):
         register_receiver_index: int = int(self.IR[1], base=16)
+        self.__awaken_rf_if(register_receiver_index)
         register_operand_one: int = int(self.IR[2], base=16)
         register_operand_two: int = int(self.IR[3], base=16)
         self.__registers[register_receiver_index].value = self.__registers[register_operand_one].value ^ \
@@ -114,21 +131,22 @@ class Simulator:
 
     def __rotate_right(self):
         register_to_rotate_index: int = int(self.IR[1], base=16)
+        self.__awaken_rf_if(register_to_rotate_index)
         rotate_by: int = int(self.IR[3], base=16)
         self.__registers[register_to_rotate_index].value = int(right_rotation(self.__registers[register_to_rotate_index].binary_value, rotate_by), base=2)
 
     def __jump_when_equal(self):
         register_to_check_index = int(self.IR[1], base=16)
         jump_to = int(self.IR[2:], base=16)
-        self.__jmp = True
         if self.__registers[register_to_check_index] == self.__registers[0]:
+            self.__jmp = True
             self.PC = jump_to
 
     def __jump_when_less_or_equal(self):
         register_to_check_index = int(self.IR[1], base=16)
         jump_to = int(self.IR[2:], base=16)
-        self.__jmp = True
-        if self.__registers[register_to_check_index] <= self.check_reference_register():
+        if self.__registers[register_to_check_index] <= self.__registers[0]:
+            self.__jmp = True
             self.PC = jump_to
 
     def __unconditional_jump(self):
@@ -263,9 +281,15 @@ class Simulator:
         self.PC = 0
         self.IR = "0000"
 
+    def __put_rf_to_sleep(self):
+        self.rf_sleeping = True
+
     def return_stdout(self) -> str:
+        if self.rf_sleeping:
+            return ""
         stdout = ""
         for stdout_register_index in self.stdout_register_indices:
             register_value = self.__registers[stdout_register_index].value
             stdout += chr(register_value)
+        self.__put_rf_to_sleep()
         return stdout

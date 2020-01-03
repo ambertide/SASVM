@@ -143,7 +143,6 @@ class Assembler:
             if Assembler.__is_label(line):
                 labels_memory_loc[Assembler.__return_label_name(line)] = 0
                 last_label_name = Assembler.__return_label_name(line)
-                continue
             elif last_label_name: # If before came a label definition
                 address_str: str = Assembler.__org_compile(line) # Suceeding ORG definition is the mem. add. of label.
                 address: int = int(address_str, base=16) if address_str != "" else memory_address # Otherwise it is just the next

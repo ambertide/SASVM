@@ -2,7 +2,7 @@ jmp 20h
 
 dividesignificants:
 	org 	20h
-	load	R1, [0xA0]
+	load	R1, 80h
 	load	R2, 00001111b
 	load	R3, 11110000b
 	and	R4, R1, R2
