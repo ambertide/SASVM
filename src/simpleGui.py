@@ -374,6 +374,7 @@ class SpaceCatSimulator:
         language_selection.set(lang[self.conf.get("lang")])
         language_sel = OptionMenu(language_selector, language_selection, *langs)
         language_sel.grid(row=1, column=0)
+        
         def __set_language():
             self.conf.set("lang", lang_rev[language_selection.get()])
             showwarning(title=self.lang.restart_title, message=self.lang.restart_message)
