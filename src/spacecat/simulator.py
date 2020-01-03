@@ -166,14 +166,17 @@ class Simulator:
     def __next__(self):
         if not self.__can_continue:
             raise StopIteration
-        if self.PC == 256:
+        if self.PC == self.mem_size:
             raise StopIteration
         self.IR = str(self.__memory[self.PC]) + str(self.__memory[self.PC + 1])
         if not self.__jmp:
             self.PC += 2
+            self.__execute()
         else:
+            self.__execute()
+            self.PC+=2
             self.__jmp = False
-        self.__execute()
+
         return self.__memory, self.__registers
 
     def __iter__(self):
