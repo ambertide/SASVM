@@ -167,7 +167,8 @@ class Assembler:
         Parse the string.
         :return:
         """
-        self.__cleaned_string = self.__strip_comments_spaces_tabs(self.string)
+        self.__cleaned_string = self.string.lower()
+        self.__cleaned_string = self.__strip_comments_spaces_tabs(self.__cleaned_string)
         self.__cleaned_string = self.__replace_labels(self.__cleaned_string)
         self.__cleaned_string = self.convert_numerals_hexadecimal(self.__cleaned_string)
         lines = self.__cleaned_string.split("\n")
@@ -200,46 +201,46 @@ class Assembler:
                 if operand.startswith("["):
                     if operand.startswith("[R"):  # Indirect Load
                         register_from = operand
-                        instruction = "D0" + register.strip("R") + register_from.strip("[R").strip("]")
+                        instruction = "D0" + register.strip("r") + register_from.strip("[R").strip("]")
                     else:  # Direct load
                         memory_address_pointer = operand
-                        instruction = "1" + register.strip("R") + memory_address_pointer.strip("[").strip("]")
+                        instruction = "1" + register.strip("r") + memory_address_pointer.strip("[").strip("]")
                 else:  # Immediate Load
                     number = operand
-                    instruction = "2" + register.strip("R") + number
+                    instruction = "2" + register.strip("r") + number
             elif line.startswith("store"):
                 register, operand = operands.split(",")
                 if operand.startswith("[R"): # Indirect Store
                     register_pointer = operand
-                    instruction = "E0" + register.strip("R") + register_pointer.strip("[R").strip("]")
+                    instruction = "E0" + register.strip("r") + register_pointer.strip("[R").strip("]")
                 else: # Direct store
                     memory_address_pointer = operand
-                    instruction = "3" + register.strip("R") + memory_address_pointer.strip("[").strip("]")
+                    instruction = "3" + register.strip("r") + memory_address_pointer.strip("[").strip("]")
             elif line.startswith("move"):
                 register, register_from = operands.split(",")
-                instruction = "40" + register_from.strip("R") + register.strip("R")
+                instruction = "40" + register_from.strip("r") + register.strip("r")
 
             elif line.startswith("addi"):
                 register, register_one, register_two = operands.split(",")
-                instruction = "5" + register.strip("R") + register_one.strip("R") + register_two.strip("R")
+                instruction = "5" + register.strip("r") + register_one.strip("r") + register_two.strip("r")
             elif line.startswith("addf"):
                 register, register_one, register_two = operands.split(",")
-                instruction = "6" + register.strip("R") + register_one.strip("R") + register_two.strip("R")
+                instruction = "6" + register.strip("r") + register_one.strip("r") + register_two.strip("r")
             elif mnemonic in self.three_register_operations: # Arithmatic operations
                 instruction = self.three_register_op_codes[mnemonic] + \
-                              ''.join(map(lambda r: r.strip("R"), operands.split(",")))
+                              ''.join(map(lambda r: r.strip("r"), operands.split(",")))
             elif line.startswith("ror"):
                 register, number_of_rotations = operands.split(",")
                 if int(number_of_rotations) > 15:
                     raise SyntaxError("Can't rotate more than 15 times.")
-                instruction = "A" + register.strip("R") + number_of_rotations
-            elif line.startswith("jmpEQ"):
+                instruction = "A" + register.strip("r") + number_of_rotations
+            elif line.startswith("jmpeq"):
                 register, address = operands.split(",")
-                register = register.split("=")[0].strip("R")
+                register = register.split("=")[0].strip("r")
                 instruction = "B" + register + address
-            elif line.startswith("jmpLE"):
+            elif line.startswith("jmple"):
                 register, address = operands.split(",")
-                register = register.split("<=")[0].strip("R")
+                register = register.split("<=")[0].strip("r")
                 instruction = "F" + register + address
             elif line.startswith("jmp"):
                 instruction = "B0" + operands
