@@ -146,7 +146,7 @@ class SpaceCatSimulator:
         self.buttons_frame.pack(fill="x", side=TOP)
         self.memory_canvas.pack()
         self.register_canvas.pack()
-        self.monitor_canvas.pack()
+        self.monitor_canvas.pack(fill="x")
         self.bottom_bar.pack(fill="x", side=BOTTOM)
 
     def __on_edit(self, entry):
@@ -170,7 +170,7 @@ class SpaceCatSimulator:
         :return:
         """
         save_file_name: str = filedialog.asksaveasfilename(title=self.lang.save_as,
-                                                           filetypes=[(self.lang._prog, ".prg"),
+                                                           filetypes=[(self.lang.prog, ".prg"),
                                                                       (self.lang.svm, ".svm")])
         if save_file_name == "":
             return None
@@ -302,7 +302,7 @@ class SpaceCatSimulator:
         self.ir = Entry(master=self.register_canvas, width=6)
         self.ir.grid(row=2, column=9, columnspan=2)
         Button(master=self.register_canvas, text="∅", command=self.__reset_ir_pc).grid(row=2, column=11)
-        self.monitor = Message(self.monitor_canvas, textvariable=self.monitor_string)
+        self.monitor = Message(self.monitor_canvas, textvariable=self.monitor_string, width=60)
         self.monitor.config(bg="black", fg="green", font=("fixedsys", 15))
         self.monitor.pack()
         self.__load_memory_to_view()
