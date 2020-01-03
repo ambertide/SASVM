@@ -28,7 +28,7 @@ class AlphabetBenchmark(unittest.TestCase):
             i += 1
             if i == 10_000:
                 self.fail("Failed to resolve in given CPU Cycles.")
-        self.assertEqual('ABCDEFGHIJKLMNOPRSTUVYXWQ', output)
+        self.assertEqual('@ABCDEFGHIJKLMNOPQRSTUVWXYZ', output)
 
 if __name__ == '__main__':
     unittest.main()

@@ -78,8 +78,12 @@ def generate_from_config(input_directory: str, config_file: str, output_director
 
 if __name__ == "__main__":
     print("Generating...")
-    print(getcwd())
-    relative_import_directory = argv[1]
-    config_file = argv[2]
-    output_directory = argv[3]
+    if len(argv) > 1:
+        relative_import_directory = argv[1]
+        config_file = argv[2]
+        output_directory = argv[3]
+    else:
+        relative_import_directory = "../../src/data/sample_scripts"
+        config_file="test_files.csv"
+        output_directory="../../src/test/integration_tests"
     generate_from_config(relative_import_directory, config_file, output_directory)
