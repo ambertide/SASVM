@@ -203,15 +203,55 @@ class Assembler:
             self.__raise_exception(f"{mnemonic} is not a legal mnemonic.")
 
     def __generate_instruction(self, line) -> str:
+        """
+        Generate an instruction
+        :param line: Line to generate the instruction from.
+        :return: the generated instruction.
+        """
         mnemonic = line.split(" ")[0]
         if mnemonic in ["load", "store"]:
             return self.__generate_contested_instruction(mnemonic, line)
         else:
             return self.__generate_uncontested_instruction(mnemonic, line)
 
-    def __insert_instruction_into_memory(self, memory_pointer: int, instruction: str):
+    def __insert_instruction_into_memory(self, memory_pointer: int, instruction: str) -> None:
+        """
+        Write a given instruction into memory.
+        :param memory_pointer: Memory pointer's current location.
+        :param instruction: Instruction to write to the memory.
+        :return: None.
+        """
         self.memory[memory_pointer].value, self.memory[memory_pointer + 1].value = int(instruction[0:2], base=16), \
                                                                                    int(instruction[2:4], base=16)
+
+    def __db_write_to_memory(self, memory_pointer: int, operands: List[str]) -> int:
+        """
+        Write the contents of the db directive to the memory
+        :param memory_pointer: current memory pointer
+        :param operands: operands to write into memory.
+        :return: new memory pointer.
+        """
+        for operand in operands:
+            for char in operand:
+                self.memory[memory_pointer].value = ord(char)
+                memory_pointer += 1
+        return memory_pointer
+
+    def __consume_directive(self, line: str, memory_pointer: int) -> int:
+        """
+        Consume the directives by modifying necessary parameters.
+        :param line: line with directive
+        :param memory_pointer: current memory pointer
+        :return: the new memory pointer after directive is consumed.
+        """
+        if line.startswith("org"):
+            org_pointer: str = line.strip("org ")
+            return int(org_pointer, base=16)
+        else:
+            mnemonic, operands = line.split(" ", 1)
+            operands = operands.split(",")
+            memory_pointer = self.__db_write_to_memory(memory_pointer, operands)
+            return memory_pointer
 
     def __parse(self):
         """
@@ -224,24 +264,9 @@ class Assembler:
         memory_pointer: int = 0
         instruction = ""
         for line in lines:
-            if line == "":
+            if line.startswith("org") or line.startswith("db"):
+                memory_pointer = self.__consume_directive(line, memory_pointer)
                 continue
-            mnemonic, operands = "", ""
-            if line.startswith("org"):
-                org_pointer: str = line.strip("org ")
-                memory_pointer = int(org_pointer, base=16)
-                continue
-            if line.startswith("db"):
-                mnemonic, operands = line.split(" ", 1)
-                operands = operands.split(",")
-                for operand in operands:
-                    if type(operand) == str:
-                        for char in operand:
-                            self.memory[memory_pointer].value = ord(char)
-                            memory_pointer += 1
-                    elif type(operand) == int:
-                        self.memory[memory_pointer].value = int(operand, 16)
-                        memory_pointer += 1
             instruction = self.__generate_instruction(line)
             if instruction:
                 self.__insert_instruction_into_memory(memory_pointer, instruction)
