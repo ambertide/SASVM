@@ -1,1 +1,1 @@
-__all__ = ["assembler", "common_utils", "simulator"]
+__all__ = ["assembler", "common_utils", "simulator", "disassembler"]

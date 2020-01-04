@@ -1,7 +1,8 @@
 from re import sub
 from re import compile as regex_compile
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from spacecat.common_utils import Cell
+from spacecat.instructions import INSTRUCTIONS, MATCH_TO_CONTESTED_INSTRUCTION
 
 
 def convert_numeral(string: str) -> str:
@@ -162,16 +163,64 @@ class Assembler:
             label_filtered += line + "\n"
         return label_filtered
 
-    def __parse(self):
+    def __raise_exception(self, message):
+        pass
+
+    def __clean_string(self) -> None:
         """
-        Parse the string.
-        :return:
+        Clean the strings from tabs spaces and standardise it to be parsed.
+        :return: None.
         """
         self.__cleaned_string = self.string.lower()
         self.__cleaned_string = self.__strip_comments_spaces_tabs(self.__cleaned_string)
         self.__cleaned_string = self.__replace_labels(self.__cleaned_string)
         self.__cleaned_string = self.convert_numerals_hexadecimal(self.__cleaned_string)
+
+    def __generate_contested_instruction(self, mnemonic: str, line: str) -> str:
+        """
+        Generate a contested instruction which may resolve to multiple bytecode formats.
+        :param mnemonic: Mnemonic name
+        :param line: Line to translate
+        :return: the instruction.
+        """
+        for match_case, matched in MATCH_TO_CONTESTED_INSTRUCTION:
+            if match_case(mnemonic, line):
+                return matched.assemble(line)
+        else:
+            self.__raise_exception(f"{mnemonic} is not a legal mnemonic.")
+
+    def __generate_uncontested_instruction(self, mnemonic, line) -> str:
+        """
+        Generate an uncontested instruction whose mnemonic bind to only one bytecode.
+        :param mnemonic: mnemonic name
+        :param line: line to translate
+        :return: none.
+        """
+        for instruction in INSTRUCTIONS:
+            if instruction.mnemonic_name == mnemonic:
+                return instruction.assemble(line)
+        else:
+            self.__raise_exception(f"{mnemonic} is not a legal mnemonic.")
+
+    def __generate_instruction(self, line) -> str:
+        mnemonic = line.split(" ")[0]
+        if mnemonic in ["load", "store"]:
+            return self.__generate_contested_instruction(mnemonic, line)
+        else:
+            return self.__generate_uncontested_instruction(mnemonic, line)
+
+    def __insert_instruction_into_memory(self, memory_pointer: int, instruction: str):
+        self.memory[memory_pointer].value, self.memory[memory_pointer + 1].value = int(instruction[0:2], base=16), \
+                                                                                   int(instruction[2:4], base=16)
+
+    def __parse(self):
+        """
+        Parse the string.
+        :return:
+        """
+        self.__clean_string()
         lines = self.__cleaned_string.split("\n")
+        lines = list(filter(lambda line_: line_ != "", lines))
         memory_pointer: int = 0
         instruction = ""
         for line in lines:
@@ -182,11 +231,8 @@ class Assembler:
                 org_pointer: str = line.strip("org ")
                 memory_pointer = int(org_pointer, base=16)
                 continue
-            if line == "halt":
-                instruction = "C000"
-            else:
-                mnemonic, operands = line.split(" ", 1)
             if line.startswith("db"):
+                mnemonic, operands = line.split(" ", 1)
                 operands = operands.split(",")
                 for operand in operands:
                     if type(operand) == str:
@@ -196,60 +242,12 @@ class Assembler:
                     elif type(operand) == int:
                         self.memory[memory_pointer].value = int(operand, 16)
                         memory_pointer += 1
-            elif line.startswith("load"):
-                register, operand = operands.split(",")
-                if operand.startswith("["):
-                    if operand.startswith("[R"):  # Indirect Load
-                        register_from = operand
-                        instruction = "D0" + register.strip("r") + register_from.strip("[R").strip("]")
-                    else:  # Direct load
-                        memory_address_pointer = operand
-                        instruction = "1" + register.strip("r") + memory_address_pointer.strip("[").strip("]")
-                else:  # Immediate Load
-                    number = operand
-                    instruction = "2" + register.strip("r") + number
-            elif line.startswith("store"):
-                register, operand = operands.split(",")
-                if operand.startswith("[R"): # Indirect Store
-                    register_pointer = operand
-                    instruction = "E0" + register.strip("r") + register_pointer.strip("[R").strip("]")
-                else: # Direct store
-                    memory_address_pointer = operand
-                    instruction = "3" + register.strip("r") + memory_address_pointer.strip("[").strip("]")
-            elif line.startswith("move"):
-                register, register_from = operands.split(",")
-                instruction = "40" + register_from.strip("r") + register.strip("r")
-
-            elif line.startswith("addi"):
-                register, register_one, register_two = operands.split(",")
-                instruction = "5" + register.strip("r") + register_one.strip("r") + register_two.strip("r")
-            elif line.startswith("addf"):
-                register, register_one, register_two = operands.split(",")
-                instruction = "6" + register.strip("r") + register_one.strip("r") + register_two.strip("r")
-            elif mnemonic in self.three_register_operations: # Arithmatic operations
-                instruction = self.three_register_op_codes[mnemonic] + \
-                              ''.join(map(lambda r: r.strip("r"), operands.split(",")))
-            elif line.startswith("ror"):
-                register, number_of_rotations = operands.split(",")
-                if int(number_of_rotations) > 15:
-                    raise SyntaxError("Can't rotate more than 15 times.")
-                instruction = "A" + register.strip("r") + number_of_rotations
-            elif line.startswith("jmpeq"):
-                register, address = operands.split(",")
-                register = register.split("=")[0].strip("r")
-                instruction = "B" + register + address
-            elif line.startswith("jmple"):
-                register, address = operands.split(",")
-                register = register.split("<=")[0].strip("r")
-                instruction = "F" + register + address
-            elif line.startswith("jmp"):
-                instruction = "B0" + operands
+            instruction = self.__generate_instruction(line)
             if instruction:
-                self.memory[memory_pointer].value, self.memory[memory_pointer + 1].value = int(instruction[0:2], base= 16), \
-                                                                                           int(instruction[2:4], base=16)
+                self.__insert_instruction_into_memory(memory_pointer, instruction)
                 memory_pointer += 2
                 instruction = ""
 
 if __name__ == "__main__":
-    with open("ceyda.asm", "r") as file:
+    with open("../data/sample_scripts/ceyda.asm", "r") as file:
         Assembler.instantiate(file.read(), 256)

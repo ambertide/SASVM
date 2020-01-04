@@ -1,4 +1,5 @@
-from typing import List, Dict, Union, Callable
+from dataclasses import dataclass
+from typing import List, Dict, Union, Callable, Tuple
 from os import system
 
 
