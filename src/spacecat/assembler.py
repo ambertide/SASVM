@@ -262,16 +262,13 @@ class Assembler:
         lines = self.__cleaned_string.split("\n")
         lines = list(filter(lambda line_: line_ != "", lines))
         memory_pointer: int = 0
-        instruction = ""
         for line in lines:
             if line.startswith("org") or line.startswith("db"):
                 memory_pointer = self.__consume_directive(line, memory_pointer)
                 continue
             instruction = self.__generate_instruction(line)
-            if instruction:
-                self.__insert_instruction_into_memory(memory_pointer, instruction)
-                memory_pointer += 2
-                instruction = ""
+            self.__insert_instruction_into_memory(memory_pointer, instruction)
+            memory_pointer += 2
 
 if __name__ == "__main__":
     with open("../data/sample_scripts/ceyda.asm", "r") as file:
