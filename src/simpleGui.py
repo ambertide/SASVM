@@ -1,5 +1,5 @@
 from tkinter import Tk, Label, filedialog, Entry, END, Menu, Event, Button, Frame, RAISED, BOTTOM, TOP, FLAT, Toplevel, \
-    StringVar, OptionMenu, W, E, S, N, Message
+    StringVar, OptionMenu, W, E, S, N
 from tkinter.messagebox import showwarning
 from typing import List, Dict, TypeVar, Optional, Callable
 from spacecat.simulator import Simulator
@@ -72,7 +72,7 @@ class SpaceCatSimulator:
 
         self.master = master
         self.master.resizable(height=False, width=False)
-        self.master.geometry("510x510")
+        self.master.geometry("510x520")
         self.master.iconbitmap("resources/spacecat.ico")
         self.master.title(self.lang.title)
 
@@ -83,7 +83,6 @@ class SpaceCatSimulator:
 
         self.file_path: Optional[str] = None
         self.current_tick: TICK = TICK.LOW
-        self.monitor_string = StringVar()
         self.clicked_cells: List[CellEntry] = []
 
         self.__machine: Simulator = Simulator(self.MEMORY_SIZE, self.REGISTER_SIZE, self.STDOUT_REGISTER_INDICES)
@@ -209,7 +208,8 @@ class SpaceCatSimulator:
         neutron_kitty = NeutronKitty(Tk(), string)
 
     def __check_monitor(self):
-        self.monitor_string.set(self.monitor_string.get() + self.__machine.return_stdout())
+        new_text = self.monitor["text"] + self.__machine.return_stdout()
+        self.monitor["text"] = new_text.split("\n")[-1]
 
     def __sync_machine(self):
         """
@@ -302,9 +302,9 @@ class SpaceCatSimulator:
         self.ir = Entry(master=self.register_canvas, width=6)
         self.ir.grid(row=2, column=9, columnspan=2)
         Button(master=self.register_canvas, text="∅", command=self.__reset_ir_pc).grid(row=2, column=11)
-        self.monitor = Message(self.monitor_canvas, textvariable=self.monitor_string, width=60)
+        self.monitor = Label(self.monitor_canvas, text="", width=1000)
         self.monitor.config(bg="black", fg="green", font=("fixedsys", 15))
-        self.monitor.pack()
+        self.monitor.pack(fill="x")
         self.__load_memory_to_view()
 
     def __reset_ir_pc(self) -> None:
