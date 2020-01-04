@@ -6,7 +6,17 @@ SpaceCat Assembly Simulator is an educational tool that simulates an 8-bit proce
 Computer Science: An Overview by Brookshear & Brylow. It is compatible with a previous implementation of the same machine
 called SimpSim (or BasSim, depending on the locale.)
 
-##Instructions and Assembly Language
+## The Machine
+SVM is a simple machine, it contains 256 memory addresses each holding up to 32 bits of data, as well as 16 registers.
+
+### Special Registers
+Name | Representation | Usage
+-----|----------------|------
+Program Counter | PC | Program counter holds the address of the next memory cell to execute|
+Instruction Register |IR | Instruction register holds the last instruction that was executed.|
+STDOUT | RF | RF register is mapped to the STDOUT, when RF is modified in some way, character corresponding to the value inside RF according to RF is outputted to STDOUT, which is almost always the screen.
+
+## Instructions and Assembly Language
 
 SVM works on a simplified assembly language.
 
@@ -46,7 +56,7 @@ Instruction | Operands | Explanation | OP-Code Representation
 --------|----------|-------------|----------
 LOAD | Register, [Memory Address] | Loads the value in the memory address to register | 1RMe
 LOAD | Register, Value | Loads the value to the register | 2RVa
-STORE | Register, [Memory Address] | Store the value in register in the memory address | 3RVa
+STORE | Register, [Memory Address] | Store the value in register in the memory address | 3RMe
 MOVE | Register, Register | Move the value in register 2 to register 1 | 40RR
 ROR | Register, Value | Rotate the Register right Value times | AR0V
 JMP |  Value | Jump to the memory cell indexed value | B0Va
