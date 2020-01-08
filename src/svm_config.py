@@ -9,7 +9,7 @@ class Language:
         def __add_line(line: str) -> None:
             key, value = line.split(":=")
             self.strings[key] = value.strip("\n")
-        with open(file_name, "r") as file:
+        with open(file_name, "r", encoding="utf8") as file:
             for line in file.readlines():
                 if line == "":
                     continue
