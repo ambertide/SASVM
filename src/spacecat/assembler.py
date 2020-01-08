@@ -1,6 +1,6 @@
 from re import sub
 from re import compile as regex_compile
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 from spacecat.common_utils import Cell
 from spacecat.instructions import INSTRUCTIONS, MATCH_TO_CONTESTED_INSTRUCTION
 
@@ -40,7 +40,7 @@ class Assembler:
     org_pattern = regex_compile(r"(?<=org )\w+")
     string_pattern = regex_compile(r"\"\w+\"|'\w+'")
     three_register_operations = ["addi", "addf", "or", "xor", "and"]
-    three_register_op_codes = {"addi":"5", "addf":"6", "or":"7", "and":"8", "xor":"9"}
+    three_register_op_codes = {"addi": "5", "addf": "6", "or": "7", "and": "8", "xor": "9"}
 
     def __init__(self, string: str, mem_size: int):
         self.memory: List[Cell] = [Cell() for _ in range(mem_size)]
@@ -60,16 +60,25 @@ class Assembler:
         :param string:
         :return:
         """
-        return string.endswith(":")
+        return string.endswith(":") and '"' not in string and "'" not in string
 
     @staticmethod
-    def __return_label_name(string: str) -> str:
+    def __is_org(string: str) -> bool:
+        """
+        Return if a given string is an org directive
+        :param string: String to check for org.
+        :return: True if org.
+        """
+        return string.startswith("org ")
+
+    @staticmethod
+    def __split_label(string: str) -> List[str]:
         """
         Return the name of label from a label statement
         :param string:
         :return:
         """
-        return string.replace(":", "")
+        return string.split(":")
 
     @staticmethod
     def __org_compile(string: str) -> str:
@@ -130,38 +139,107 @@ class Assembler:
         return string_substiuted
 
     @staticmethod
-    def __replace_labels(string: str) -> str:
+    def __parse_db(db_exp: str) -> List[Union[str, int]]:
         """
-        Delete label declarations and replace label references with explicit declarations.
+        Parse a DB directive returning its contents as a list.
+        :param db_exp: DB directive command.
+        :return: Contents of the db as the directive.
+        """
+        db_exp_ = db_exp.split(" ", 1)[1]
+        db_params = [eval(param) for param in db_exp_]
+        params: List[Union[str, int]] = []
+        for param_ in db_params:
+            if isinstance(param_, str):
+                params.extend(char for char in param_)
+            else:
+                params.append(param_) # TO-DO: Error regarding number overflows in DB.
+        return params
+
+    @staticmethod
+    def __parse_expression(memory_ptr: int, expression: str) -> int:
+        """
+        Parse an expression to see where the Assembler will place it in the memory/how it will effect the memory.
+        :param memory_ptr: Current location of the memory.
+        :param expression: A directive or an instruction.
+        :return: the location of the pointer after calculations.
+        """
+        if "db " in expression:
+            return memory_ptr + len(Assembler.__parse_db(expression))
+        elif "org " in expression:
+            return int(Assembler.__org_compile(expression), base=16)
+        else:
+            return memory_ptr + 2
+
+    @staticmethod
+    def __decide_locations(lines: List[str]) -> Tuple[List[str], Dict[str, int]]:
+        """
+        Decide the memory addresses each label should point to.
+        :param lines: Lines in the source file in a list.
+        :return: A tuple of lines without label declarations and a dictionary of labels to their corresponding
+            addresses
+        """
+        label_names: List[str] = []
+        label_locations: List[int] = []
+        lines_no_label_defs = []
+        memory_pointer = -2
+        for line in lines:
+            if Assembler.__is_label(line):
+                label_name, *expression = Assembler.__split_label(line)
+                label_names.append(label_name)
+                label_locations.append(memory_pointer + 2)
+                if expression != ['']:
+                    exp = expression[0]
+                    memory_pointer = Assembler.__parse_expression(memory_pointer, exp)
+                    label_locations.pop()
+                    label_locations.append(memory_pointer)
+                    lines_no_label_defs.append(exp)
+            else:
+                memory_pointer = Assembler.__parse_expression(memory_pointer, line)
+                lines_no_label_defs.append(line)
+        label_locations_ = {label_names[i]: label_locations[i] for i in range(len(label_locations))}
+        return lines_no_label_defs, label_locations_
+
+    @staticmethod
+    def __attempt_replace(line_args: str, labels_locs: Dict[str, int]) -> str:
+        """
+        Atttempt to replace a label with its memory address.
+        :param line_args: Part of the line including the arguments.
+        :param labels_locs: Labels and their memory addresses.
+        :return: Line with the label replaced to its memory address.
+        """
+        for label in labels_locs:
+            if label in line_args:
+                line_args = line_args.replace(label, f"{labels_locs[label]:02X}h")
+                return line_args
+        return line_args
+
+    @staticmethod
+    def __replace_labels(lines_no_label_defs: List[str], label_locations: Dict[str, int]) -> List[str]:
+        """
+        Replace the labels with implicit memory addresses
+        :param lines_no_label_defs: Lines with no label definitions as a list.
+        :param label_locations: Labels and their corresponding locations as a dictionary.
+        :return: List of lines without labels.
+        """
+        new_lines: List[str] = []
+        for line in lines_no_label_defs:
+            mnemonic, *args = line.split(" ", 1)
+            if args:
+                line = mnemonic + " " + Assembler.__attempt_replace(args[0], label_locations)
+            new_lines.append(line)
+        return new_lines
+
+    @staticmethod
+    def __strip_labels(string: str) -> str:
+        """
+        Delete label declarations and replace label references with explicit memory locations.
         :param string:
         :return:
         """
-        labels_memory_loc: Dict[str, int] = {}
-        label_filtered: str = ""
-        last_label_name = ""
-        memory_address: int = 0
-        for line in string.split("\n"):
-            if Assembler.__is_label(line):
-                labels_memory_loc[Assembler.__return_label_name(line)] = 0
-                last_label_name = Assembler.__return_label_name(line)
-            elif last_label_name: # If before came a label definition
-                address_str: str = Assembler.__org_compile(line) # Suceeding ORG definition is the mem. add. of label.
-                address: int = int(address_str, base=16) if address_str != "" else memory_address # Otherwise it is just the next
-                labels_memory_loc[last_label_name] = address
-                last_label_name = ''  # Last label name is released so to go on evaluating.
-                memory_address = address + 1  # Why does this even work, I have no idea whatsoever?
-            else:
-                # Any other command other than a label def or org statement is a mnemonic and will increment memory.
-                memory_address += 2
-        # By this point, we know what labels go into what memory address.
-        for line in string.split("\n"):
-            if Assembler.__is_label(line):
-                continue
-            for label in labels_memory_loc:
-                if label in Assembler.string_pattern.sub('', line):
-                    line = line.replace(label, str(labels_memory_loc[label]))
-            label_filtered += line + "\n"
-        return label_filtered
+        lines = list(filter(lambda line_: line_ != "", string.split("\n")))
+        lines_no_label_defs, label_locations = Assembler.__decide_locations(lines)
+        lines_no_labels = Assembler.__replace_labels(lines_no_label_defs, label_locations)
+        return '\n'.join(lines_no_labels)
 
     def __raise_exception(self, message):
         pass
@@ -173,7 +251,7 @@ class Assembler:
         """
         self.__cleaned_string = self.string.lower()
         self.__cleaned_string = self.__strip_comments_spaces_tabs(self.__cleaned_string)
-        self.__cleaned_string = self.__replace_labels(self.__cleaned_string)
+        self.__cleaned_string = self.__strip_labels(self.__cleaned_string)
         self.__cleaned_string = self.convert_numerals_hexadecimal(self.__cleaned_string)
 
     def __generate_contested_instruction(self, mnemonic: str, line: str) -> str:
@@ -253,7 +331,7 @@ class Assembler:
             memory_pointer = self.__db_write_to_memory(memory_pointer, operands)
             return memory_pointer
 
-    def __parse(self):
+    def __parse(self) -> None:
         """
         Parse the string.
         :return:
@@ -270,6 +348,7 @@ class Assembler:
             self.__insert_instruction_into_memory(memory_pointer, instruction)
             memory_pointer += 2
 
+
 if __name__ == "__main__":
     with open("../data/sample_scripts/ceyda.asm", "r") as file:
-        Assembler.instantiate(file.read(), 256)
+        b = Assembler.instantiate(file.read(), 256)
