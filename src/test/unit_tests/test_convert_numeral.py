@@ -1,5 +1,5 @@
 from unittest import TestCase
-from spacecat.assembler import convert_numeral
+from spacecat.preprocessor import convert_numeral
 
 
 class TestConvert_numeral(TestCase):
