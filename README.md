@@ -57,7 +57,7 @@ Instruction | Operands | Explanation | OP-Code Representation
 LOAD | Register, [Memory Address] | Loads the value in the memory address to register | 1RMe
 LOAD | Register, Value | Loads the value to the register | 2RVa
 STORE | Register, [Memory Address] | Store the value in register in the memory address | 3RMe
-MOVE | Register, Register | Move the value in register 2 to register 1 | 40RR
+MOVE | Register, Register | Move the value in register 1 to register 2 | 40RR
 ROR | Register, Value | Rotate the Register right Value times | AR0V
 JMP |  Value | Jump to the memory cell indexed value | B0Va
 JMPEq | Register =R0, Value | Jump to Value index if Register equals R0 | BRVa
